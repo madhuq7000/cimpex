@@ -1,0 +1,39 @@
+.loginbg {
+ background: #32167d;
+  background-size: 400% 400%;
+  /* animation: gradientBG 15s ease infinite; */
+
+}
+
+@keyframes gradientBG {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.cardTop{
+    height:155px;
+     display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white !important;
+background-color: #49188d;
+    background-image: url("../../../assets/images/loginbg.png");
+}
+.card{
+    border-radius:none !important;
+    border:0px !important;
+    box-shadow:  1px 6px 0 #20212447 !important;
+}

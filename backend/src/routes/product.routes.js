@@ -4,6 +4,7 @@ const {
   addProduct,
   updateProduct,
   getProductById,
+  getProductsByCategory,
   getProducts,
 } = require("../controllers/product.controller");
 
@@ -36,6 +37,11 @@ router.put(
   },
   updateProduct
 );
+// ==============================
+// 📌 GET PRODUCTS BY CATEGORYNAME
+// ==============================
+router.get("/category/:name", getProductsByCategory);
+
 
 // ==============================
 // 📌 GET ALL PRODUCTS

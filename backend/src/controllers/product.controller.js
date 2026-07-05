@@ -6,7 +6,7 @@ const Product = require("../models/product.model");
 // ==============================
 exports.addProduct = async (req, res) => {
   try {
-    const { name, price, description, categoryId } = req.body;
+    const { name, price, description, categoryId, starrating, strikeprice } = req.body;
 
     // ✅ get multiple files
     const images = req.files ? req.files.map(file => file.filename) : [];
@@ -16,6 +16,8 @@ exports.addProduct = async (req, res) => {
       price,
       description,
       images, // ✅ array
+      starrating,
+      strikeprice,
       category: categoryId,
     });
 
@@ -32,31 +34,58 @@ exports.addProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, description, categoryId } = req.body;
+
+    const {
+      name,
+      price,
+      description,
+      strikeprice,
+      starrating,
+      categoryId,
+      existingImages,
+    } = req.body;
 
     const updateData = {
       name,
       price,
       description,
+      strikeprice,
+      starrating,
       category: categoryId,
     };
 
-    // ✅ only update images if new uploaded
+    // Images remaining after delete
+    let images = existingImages
+      ? JSON.parse(existingImages)
+      : [];
+
+    // Add newly uploaded images
     if (req.files && req.files.length > 0) {
-      updateData.images = req.files.map(file => file.filename);
+      images = [
+        ...images,
+        ...req.files.map((file) => file.filename),
+      ];
     }
 
-    const product = await Product.findByIdAndUpdate(id, updateData, {
-      new: true,
-    });
+    updateData.images = images;
+
+    const product = await Product.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    );
 
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({
+        message: "Product not found",
+      });
     }
 
     res.json(product);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({
+      message: err.message,
+    });
   }
 };
 
@@ -86,5 +115,25 @@ exports.getProducts = async (req, res) => {
     res.json(products);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+// ==============================
+// GET PRODUCTS BY CATEGORY
+// ==============================
+exports.getProductsByCategory = async (req, res) => {
+  try {
+    const { name } = req.params;
+
+    const products = await Product.find()
+      .populate("category")
+      .where("category");
+
+    const filteredProducts = products.filter(
+      (p) => p.category?.name === name
+    );
+
+    res.json(filteredProducts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

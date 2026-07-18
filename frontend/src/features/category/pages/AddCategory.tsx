@@ -20,7 +20,7 @@ export default function AddCategory() {
   const loadCategories = async () => {
     try {
       const res = await getCategoriesApi();
-      setCategories(res.data);
+      setCategories(res.data.data);
     } catch (err) {
       console.error("Failed to load categories", err);
     }

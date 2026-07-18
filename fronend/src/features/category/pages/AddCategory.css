@@ -1,0 +1,62 @@
+.inputrow{
+    display:flex;
+    gap:10px;
+}
+.nav-pills{
+    gap:10px;
+    margin-top:10px;
+    min-width:200px;
+}
+.category-form-section {
+  margin-bottom: 20px;
+  display: flex;
+ 
+}
+
+.inputrow {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.inputrow .form-control {
+  flex: 1;
+}
+
+.category-list-section {
+  margin-top: 20px;
+}
+
+/* Only affect category pills */
+.category-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.category-pills .nav-item {
+  width: 100%;
+}
+
+.category-pills .nav-link {
+  border-radius: 8px;
+}
+.categorylistcontainer{
+    display:flex;
+     flex-wrap: wrap;
+    gap:10px;
+}
+
+.listItem{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px;
+    background:blue;
+    border-radius:8px;
+    transition:.3s;
+    color:#fff;
+}
+.fa-trash{
+    margin-left:10px;
+}

@@ -1,0 +1,41 @@
+login api
+================
+http://localhost:3000/api/auth/register
+{
+  "name": "Amit Kumar",
+  "email": "amit@gmail.com",
+  "password": "123456"
+}
+http://localhost:3000/api/auth/login
+{
+  "email": "amit@gmail.com",
+  "password": "123456"
+}
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YTdiNjE0YjEzY2Q5ZTVjYWEyYTM3MDAiLCJpYXQiOjE3ODY0NzIxNTIsImV4cCI6MTc4NzA3Njk1Mn0.H8px8Roj-zJVvimTy_nKFfB7QbIq0VOkuAOoUNvZXN8
+
+http://localhost:3000/api/categories
+{
+  "name": "educationmath",
+  "description": "math is good for calculation"
+}
+
+
+http://localhost:3000/api/discussions
+{
+  "title": "Will AI replace softwareewewewewe developers?",
+  "description": "Let's discusswewewewewe how AI may change software development jobs in the future.",
+  "categoryId": "6a73277cf53ad10e2ca0d5182222"
+}
+
+http://localhost:3000/api/comments
+{
+  "discussionId": "6a7354f38ca829d620951268",
+  "comment": "I think AI will significantly change software development."
+}
+
+
+
+https://github.com/madhuq7000/vaadsamvaad.git
+
+git remote add origin https://github.com/madhuq7000/vaadsamvaad.git

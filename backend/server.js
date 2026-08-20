@@ -17,7 +17,9 @@ connectDB();
 
 const app = express();
 
-// Enable CORS
+// ========================================
+// CORS
+// ========================================
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
@@ -25,30 +27,52 @@ app.use(
   }),
 );
 
-// Parse JSON request body
-// This must come before all API routes
+// ========================================
+// BODY PARSER
+// ========================================
 app.use(express.json());
 
-// Make uploaded files publicly accessible
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// ========================================
+// STATIC UPLOADS
+// ========================================
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads")),
+);
 
-// Authentication APIs
+// ========================================
+// AUTH ROUTES
+// ========================================
 app.use("/api/auth", authRoutes);
 
-// Category APIs
+// ========================================
+// CATEGORY ROUTES
+// ========================================
 app.use("/api/categories", categoryRoutes);
 
-// Discussion APIs
+// ========================================
+// DISCUSSION ROUTES
+// ========================================
 app.use("/api/discussions", discussionRoutes);
+
+// ========================================
+// COMMENT ROUTES
+// ========================================
 app.use("/api/comments", commentRoutes);
 
-// Test API
+// ========================================
+// TEST API
+// ========================================
 app.get("/", (req, res) => {
   res.status(200).json({
+    success: true,
     message: "VaadSamvaad API is running",
   });
 });
 
+// ========================================
+// SERVER
+// ========================================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

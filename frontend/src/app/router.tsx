@@ -13,6 +13,9 @@ import ProductList from "../features/auth/product/pages/ProductList";
 import ProductDetails from "../features/auth/product/pages/productDetails";
 
 import AddCategory from "../features/category/pages/AddCategory";
+import Discussion from "../features/auth/discussion/discussion";
+import DiscussionDetails from "../features/auth/discussion/discussiondetails";
+import StartDiscussion from "../features/auth/discussion/startDiscussion";
 
 const Dashboard = () => <h1>Dashboard</h1>;
 
@@ -41,6 +44,9 @@ export default function AppRouter() {
           <Route path="/add-product" element={<AddProduct />} />
           <Route path="/edit-product/:id" element={<EditProduct />} />
           <Route path="/add-category" element={<AddCategory />} />
+          <Route path="/discussion" element={<Discussion />} />
+          <Route path="/discussion/:id" element={<DiscussionDetails />} />
+          <Route path="/start-discussion" element={<StartDiscussion />} />
         </Route>
 
         {/* Default Route */}

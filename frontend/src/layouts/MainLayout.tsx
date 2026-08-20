@@ -1,21 +1,13 @@
 import { useEffect, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-
-import Header from "../sharedComponent/Header";
-import Footer from "../sharedComponent/Footer";
-import WhatsAppFloat from "../sharedComponent/WhatsAppFloat";
+import type { FC } from "react";
+import { Link, Outlet } from "react-router-dom";
 
 import "./MainLayout.css";
 import type { Category } from "../features/category/types";
 import { getCategoriesApi } from "../features/category/categoryApi";
+import logoImage from "../assets/images/logo.png";
 
-const MainLayout: React.FC = () => {
-  const cartItems = JSON.parse(localStorage.getItem("cart") || "[]");
-  const cartCount = cartItems.length;
-
-  const location = useLocation();
-  const navigate = useNavigate();
-
+const MainLayout: FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -24,6 +16,9 @@ const MainLayout: React.FC = () => {
     const loadCategories = async () => {
       try {
         const res = await getCategoriesApi();
+
+        console.log("Categories:", res.data.data);
+
         setCategories(res.data.data);
       } catch (error) {
         console.error("Failed to load categories", error);
@@ -33,96 +28,363 @@ const MainLayout: React.FC = () => {
     loadCategories();
   }, []);
 
-  // Keep sidebar selection in sync with URL
-  useEffect(() => {
-    if (location.pathname === "/product-list") {
-      setSelectedCategory("All");
-    } else if (location.pathname.startsWith("/product-list/")) {
-      const category = decodeURIComponent(
-        location.pathname.replace("/product-list/", ""),
-      );
-      setSelectedCategory(category);
-    }
-  }, [location.pathname]);
-
-  let contentClass = "product-grid";
-
-  if (
-    location.pathname === "/add-category" ||
-    location.pathname === "/add-product" ||
-    location.pathname.startsWith("/products/") ||
-    location.pathname === "/product"
-  ) {
-    contentClass = "page-layout";
-  }
-
-  const handleCategoryClick = (path: string, categoryName: string = "All") => {
-    setSearchKeyword("");
-    setSelectedCategory(categoryName);
-    navigate(path);
-  };
-
   return (
-    <div className="dashboard">
-      <aside className="sidebar">
-        <div className="logo">Cimpex</div>
+    <>
+      {/* ================= HEADER ================= */}
 
-        <div className="product-count">
-          <h6>Categories ({categories.length})</h6>
+      <header className="topbar d-flex align-items-center justify-content-between gap-3">
+        <div className="d-flex align-items-center gap-3">
+          <button
+            className="btn mobile-toggle p-2"
+            type="button"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#sidebarOffcanvas"
+            aria-label="Open menu"
+          >
+            <i className="bi bi-list fs-4"></i>
+          </button>
+
+          <Link
+            to="/"
+            className="d-flex align-items-center gap-2 text-decoration-none"
+          >
+            <img src={logoImage} className="headerLogo" alt="VaadSamvaad" />
+
+            <span className="brand-name">VaadSamvaad</span>
+          </Link>
         </div>
 
-        <ul className="menu">
-          <li
-            className={selectedCategory === "All" ? "active" : ""}
-            onClick={() => handleCategoryClick("/product-list", "All")}
-            style={{ cursor: "pointer" }}
-          >
-            All
-          </li>
+        {/* ================= SEARCH ================= */}
 
-          {categories.length === 0 ? (
-            <li>Loading...</li>
-          ) : (
-            categories.map((category) => (
-              <li
-                key={category._id}
-                className={selectedCategory === category.name ? "active" : ""}
-                onClick={() =>
-                  handleCategoryClick(
-                    `/product-list/${encodeURIComponent(category.name)}`,
-                    category.name,
-                  )
-                }
-                style={{ cursor: "pointer" }}
-              >
-                {category.name}
-              </li>
-            ))
-          )}
-        </ul>
-      </aside>
+        <div className="search-box flex-grow-1 mx-3 d-none d-sm-block">
+          <i className="bi bi-search"></i>
 
-      <main className="productcontent">
-        <Header
-          cartCount={cartCount}
-          search={searchKeyword}
-          onSearch={setSearchKeyword}
-        />
-
-        <div className={contentClass}>
-          <Outlet
-            context={{
-              searchKeyword,
-              setSelectedCategory,
-            }}
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search discussions..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
           />
         </div>
 
-        <Footer />
-      </main>
+        {/* ================= USER ================= */}
 
-      <WhatsAppFloat />
-    </div>
+        <div className="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
+          <div className="dropdown">
+            <a
+              className="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle"
+              href="#"
+              role="button"
+              data-bs-toggle="dropdown"
+            >
+              <span className="user-chip d-flex align-items-center gap-2">
+                <img src="https://i.pravatar.cc/72?img=13" alt="Amit Kumar" />
+
+                <span>Amit Kumar</span>
+              </span>
+            </a>
+
+            <ul className="dropdown-menu dropdown-menu-end">
+              <li>
+                <Link className="dropdown-item" to="/profile">
+                  Profile
+                </Link>
+              </li>
+
+              <li>
+                <Link className="dropdown-item" to="/settings">
+                  Settings
+                </Link>
+              </li>
+
+              <li>
+                <hr className="dropdown-divider" />
+              </li>
+
+              <li>
+                <button className="dropdown-item text-danger">Log Out</button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </header>
+
+      {/* ================= MAIN ================= */}
+
+      <div className="container-fluid">
+        <div className="row">
+          {/* ================= DESKTOP SIDEBAR ================= */}
+
+          <aside className="col-lg-3 col-xl-2 px-0 sidebar-col">
+            <div className="sidebar">
+              <nav className="nav flex-column mb-3">
+                <Link to="/" className="nav-link-custom">
+                  <i className="bi bi-house-door-fill"></i>
+                  Home
+                </Link>
+
+                <Link to="/discussions" className="nav-link-custom">
+                  <i className="bi bi-search"></i>
+                  Browse Discussions
+                </Link>
+
+                <Link to="/my-discussions" className="nav-link-custom">
+                  <i className="bi bi-pencil-square"></i>
+                  My Discussions
+                </Link>
+
+                <Link to="/bookmarks" className="nav-link-custom">
+                  <i className="bi bi-bookmark-fill"></i>
+                  Bookmarks
+                </Link>
+
+                <Link to="/notifications" className="nav-link-custom">
+                  <i className="bi bi-bell-fill"></i>
+                  Notifications
+                </Link>
+
+                <Link to="/profile" className="nav-link-custom">
+                  <i className="bi bi-person-fill"></i>
+                  Profile
+                </Link>
+
+                <Link to="/settings" className="nav-link-custom">
+                  <i className="bi bi-gear-fill"></i>
+                  Settings
+                </Link>
+              </nav>
+
+              {/* ================= START DISCUSSION ================= */}
+
+              <Link
+                to="/startdiscussion"
+                className="start-btn d-flex align-items-center justify-content-center gap-2"
+                style={{
+                  color: "#fff",
+                  textDecoration: "none",
+                }}
+              >
+                <i className="bi bi-plus-lg"></i>
+                Start Discussion
+              </Link>
+
+              {/* ================= PROFILE ================= */}
+
+              <div className="mt-auto sidebar-profile">
+                <img src="https://i.pravatar.cc/72?img=13" alt="Amit Kumar" />
+
+                <div>
+                  <div className="name">Amit Kumar</div>
+
+                  <div className="email">amit@example.com</div>
+
+                  <button type="button" className="logout-link">
+                    Log Out
+                  </button>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* ================= MOBILE SIDEBAR ================= */}
+
+          <div
+            className="offcanvas offcanvas-start"
+            tabIndex={-1}
+            id="sidebarOffcanvas"
+          >
+            <div className="offcanvas-header">
+              <span className="d-flex align-items-center gap-2">
+                <span className="brand-mark">
+                  <i className="bi bi-chat-dots-fill"></i>
+                </span>
+
+                <span className="brand-name">VaadSamvaad</span>
+              </span>
+
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="offcanvas"
+                aria-label="Close"
+              ></button>
+            </div>
+
+            <div className="offcanvas-body p-0">
+              <div
+                className="sidebar"
+                style={{
+                  minHeight: "auto",
+                }}
+              >
+                <nav className="nav flex-column mb-3">
+                  <Link
+                    to="/"
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-house-door-fill"></i>
+                    Home
+                  </Link>
+
+                  <Link
+                    to="/discussions"
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-search"></i>
+                    Browse Discussions
+                  </Link>
+
+                  <Link
+                    to="/my-discussions"
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-pencil-square"></i>
+                    My Discussions
+                  </Link>
+
+                  <Link
+                    to="/bookmarks"
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-bookmark-fill"></i>
+                    Bookmarks
+                  </Link>
+
+                  <Link
+                    to="/notifications"
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-bell-fill"></i>
+                    Notifications
+                  </Link>
+
+                  <Link
+                    to="/profile"
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-person-fill"></i>
+                    Profile
+                  </Link>
+
+                  <Link
+                    to="/settings"
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-gear-fill"></i>
+                    Settings
+                  </Link>
+                </nav>
+
+                <Link
+                  to="/startdiscussion"
+                  className="start-btn w-100 d-flex align-items-center justify-content-center gap-2"
+                  style={{
+                    color: "#fff",
+                    textDecoration: "none",
+                  }}
+                  data-bs-dismiss="offcanvas"
+                >
+                  <i className="bi bi-plus-lg"></i>
+                  Start Discussion
+                </Link>
+
+                <div className="sidebar-profile">
+                  <img src="https://i.pravatar.cc/72?img=13" alt="Amit Kumar" />
+
+                  <div>
+                    <div className="name">Amit Kumar</div>
+
+                    <div className="email">amit@example.com</div>
+
+                    <button type="button" className="logout-link">
+                      Log Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ================= ROUTE CONTENT ================= */}
+
+          <main className="col-lg-9 col-xl-10 main-wrap">
+            <Outlet
+              context={{
+                searchKeyword,
+                setSelectedCategory,
+                categories,
+              }}
+            />
+          </main>
+        </div>
+      </div>
+
+      {/* ================= FEATURES ================= */}
+
+      <section className="features-section">
+        <h2>Why Join VaadSamvaad?</h2>
+
+        <div className="container">
+          <div className="row g-4">
+            <div className="col-6 col-md-3">
+              <div className="feature-item">
+                <div className="feature-icon purple">
+                  <i className="bi bi-chat-square-text-fill"></i>
+                </div>
+
+                <h5>Meaningful Discussions</h5>
+
+                <p>Engage in conversations that matter and make an impact.</p>
+              </div>
+            </div>
+
+            <div className="col-6 col-md-3">
+              <div className="feature-item">
+                <div className="feature-icon green">
+                  <i className="bi bi-chat-dots-fill"></i>
+                </div>
+
+                <h5>Share Your Views</h5>
+
+                <p>Express your opinions and learn from others.</p>
+              </div>
+            </div>
+
+            <div className="col-6 col-md-3">
+              <div className="feature-item">
+                <div className="feature-icon orange">
+                  <i className="bi bi-people-fill"></i>
+                </div>
+
+                <h5>Build Community</h5>
+
+                <p>Connect with like-minded people and grow together.</p>
+              </div>
+            </div>
+
+            <div className="col-6 col-md-3">
+              <div className="feature-item">
+                <div className="feature-icon red">
+                  <i className="bi bi-shield-fill-check"></i>
+                </div>
+
+                <h5>Safe & Respectful</h5>
+
+                <p>A positive environment for healthy discussions.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
   );
 };
 

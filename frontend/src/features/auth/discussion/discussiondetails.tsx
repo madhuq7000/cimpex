@@ -329,17 +329,20 @@ const DiscussionDetails: React.FC = () => {
 
       <div className="discussion-card mb-4">
         {/* CATEGORY */}
-
         <span className="badge-tech d-inline-block mb-3">
           {discussion.category?.name || "General"}
         </span>
-
+        &nbsp;&nbsp;
+        <span
+          className="badge-tech d-inline-block mb-3"
+          style={{ cursor: "pointer" }}
+          onClick={() => navigate(`/discussion/edit/${discussion._id}`)}
+        >
+          Edit
+        </span>
         {/* TITLE */}
-
         <h1 className="thread-title mb-3">{discussion.title}</h1>
-
         {/* AUTHOR + DATE + STATS */}
-
         <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
           {/* AUTHOR */}
 
@@ -393,9 +396,7 @@ const DiscussionDetails: React.FC = () => {
             </span>
           </div>
         </div>
-
         {/* DESCRIPTION */}
-
         <p
           className="mb-3"
           style={{
@@ -405,9 +406,7 @@ const DiscussionDetails: React.FC = () => {
         >
           {discussion.description}
         </p>
-
         {/* DISCUSSION IMAGE */}
-
         {discussion.image ? (
           <div className="hero-banner mb-1">
             <img

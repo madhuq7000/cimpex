@@ -47,6 +47,7 @@ export default function AppRouter() {
           <Route path="/discussion" element={<Discussion />} />
           <Route path="/discussion/:id" element={<DiscussionDetails />} />
           <Route path="/start-discussion" element={<StartDiscussion />} />
+          <Route path="/discussion/edit/:id" element={<StartDiscussion />} />
         </Route>
 
         {/* Default Route */}

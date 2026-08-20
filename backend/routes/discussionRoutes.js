@@ -4,6 +4,7 @@ const {
   startDiscussion,
   getDiscussions,
   getDiscussionById,
+  updateDiscussion,
 } = require("../auth-controllers/discussionController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -13,7 +14,8 @@ const uploadDiscussion = require("../middleware/uploadDiscussion");
 const router = express.Router();
 
 // ==========================================
-// POST - Create Discussion
+// CREATE DISCUSSION
+// POST /api/discussions
 // ==========================================
 router.post(
   "/",
@@ -23,19 +25,26 @@ router.post(
 );
 
 // ==========================================
-// GET - Get All Discussions
+// GET ALL DISCUSSIONS
+// GET /api/discussions
 // ==========================================
-router.get(
-  "/",
-  getDiscussions
-);
+router.get("/", getDiscussions);
 
 // ==========================================
-// GET - Get Single Discussion
+// GET SINGLE DISCUSSION
+// GET /api/discussions/:id
 // ==========================================
-router.get(
+router.get("/:id", getDiscussionById);
+
+// ==========================================
+// UPDATE DISCUSSION
+// PUT /api/discussions/:id
+// ==========================================
+router.put(
   "/:id",
-  getDiscussionById
+  protect,
+  uploadDiscussion.single("image"),
+  updateDiscussion
 );
 
 module.exports = router;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
 interface Category {
@@ -7,8 +7,27 @@ interface Category {
   name: string;
 }
 
+interface Discussion {
+  _id: string;
+  title: string;
+  description: string;
+  category?: {
+    _id: string;
+    name: string;
+  };
+  image?: string;
+}
+
 const StartDiscussion: React.FC = () => {
   const navigate = useNavigate();
+
+  // ==========================================
+  // GET ID FROM URL
+  // ==========================================
+
+  const { id } = useParams<{ id: string }>();
+
+  const isEditMode = Boolean(id);
 
   // ==========================================
   // FORM STATES
@@ -19,6 +38,9 @@ const StartDiscussion: React.FC = () => {
   const [description, setDescription] = useState<string>("");
   const [image, setImage] = useState<File | null>(null);
 
+  // Existing image from database
+  const [existingImage, setExistingImage] = useState<string>("");
+
   // ==========================================
   // CATEGORY STATES
   // ==========================================
@@ -27,10 +49,12 @@ const StartDiscussion: React.FC = () => {
   const [categoryLoading, setCategoryLoading] = useState<boolean>(true);
 
   // ==========================================
-  // SUBMIT STATES
+  // SUBMIT / PAGE STATES
   // ==========================================
 
   const [loading, setLoading] = useState<boolean>(false);
+  const [pageLoading, setPageLoading] = useState<boolean>(false);
+
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
 
@@ -42,7 +66,6 @@ const StartDiscussion: React.FC = () => {
     const fetchCategories = async () => {
       try {
         setCategoryLoading(true);
-        setError("");
 
         const response = await axios.get(
           "http://localhost:3000/api/categories",
@@ -64,6 +87,78 @@ const StartDiscussion: React.FC = () => {
   }, []);
 
   // ==========================================
+  // GET DISCUSSION FOR EDIT
+  // ==========================================
+
+  useEffect(() => {
+    if (!isEditMode || !id) {
+      return;
+    }
+
+    const fetchDiscussion = async () => {
+      try {
+        setPageLoading(true);
+        setError("");
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          setError("You are not logged in. Please login first.");
+          return;
+        }
+
+        console.log("Fetching discussion for edit:", id);
+
+        const response = await axios.get(
+          `http://localhost:3000/api/discussions/${id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        console.log("Discussion API response:", response.data);
+
+        const discussion: Discussion = response.data.data;
+
+        if (!discussion) {
+          setError("Discussion not found.");
+          return;
+        }
+
+        // ======================================
+        // PATCH DATABASE DATA INTO FORM
+        // ======================================
+
+        setTitle(discussion.title || "");
+
+        setDescription(discussion.description || "");
+
+        setCategoryId(discussion.category?._id || "");
+
+        setExistingImage(discussion.image || "");
+
+        console.log("Form patched with discussion data");
+      } catch (error: any) {
+        console.error("Failed to fetch discussion:", error);
+
+        if (error.response?.status === 401) {
+          setError("Unauthorized. Please login again.");
+        } else if (error.response?.data?.message) {
+          setError(error.response.data.message);
+        } else {
+          setError("Failed to load discussion.");
+        }
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
+    fetchDiscussion();
+  }, [id, isEditMode]);
+
+  // ==========================================
   // FILE CHANGE
   // ==========================================
 
@@ -74,25 +169,34 @@ const StartDiscussion: React.FC = () => {
       return;
     }
 
-    // Check file size - 5MB
+    // ======================================
+    // CHECK FILE SIZE
+    // ======================================
+
     if (file.size > 5 * 1024 * 1024) {
       setError("Image size must be less than 5MB.");
 
       event.target.value = "";
+
       return;
     }
 
-    // Check file type
+    // ======================================
+    // CHECK FILE TYPE
+    // ======================================
+
     const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
 
     if (!allowedTypes.includes(file.type)) {
       setError("Only JPG, PNG and GIF images are allowed.");
 
       event.target.value = "";
+
       return;
     }
 
     setError("");
+
     setImage(file);
   };
 
@@ -110,6 +214,14 @@ const StartDiscussion: React.FC = () => {
     if (fileInput) {
       fileInput.value = "";
     }
+  };
+
+  // ==========================================
+  // REMOVE EXISTING IMAGE
+  // ==========================================
+
+  const handleRemoveExistingImage = () => {
+    setExistingImage("");
   };
 
   // ==========================================
@@ -152,8 +264,6 @@ const StartDiscussion: React.FC = () => {
 
       if (!token) {
         setError("You are not logged in. Please login first.");
-
-        setLoading(false);
         return;
       }
 
@@ -169,7 +279,10 @@ const StartDiscussion: React.FC = () => {
 
       formData.append("categoryId", categoryId);
 
-      // Image is optional
+      // ========================================
+      // NEW IMAGE
+      // ========================================
+
       if (image) {
         formData.append("image", image);
       }
@@ -178,7 +291,11 @@ const StartDiscussion: React.FC = () => {
       // DEBUG
       // ========================================
 
-      console.log("========== CREATE DISCUSSION ==========");
+      console.log("================================");
+
+      console.log(isEditMode ? "UPDATING DISCUSSION" : "CREATING DISCUSSION");
+
+      console.log("ID:", id);
 
       console.log("Title:", title.trim());
 
@@ -186,10 +303,42 @@ const StartDiscussion: React.FC = () => {
 
       console.log("Description:", description.trim());
 
-      console.log("Image:", image);
+      console.log("New Image:", image);
+
+      console.log("================================");
 
       // ========================================
-      // POST START DISCUSSION API
+      // EDIT DISCUSSION
+      // ========================================
+
+      if (isEditMode && id) {
+        const response = await axios.patch(
+          `http://localhost:3000/api/discussions/${id}`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        console.log("Update discussion response:", response.data);
+
+        setSuccess("Discussion updated successfully!");
+
+        // ======================================
+        // REDIRECT
+        // ======================================
+
+        setTimeout(() => {
+          navigate(`/discussion/${id}`);
+        }, 800);
+
+        return;
+      }
+
+      // ========================================
+      // CREATE DISCUSSION
       // ========================================
 
       const response = await axios.post(
@@ -204,10 +353,6 @@ const StartDiscussion: React.FC = () => {
 
       console.log("Create discussion response:", response.data);
 
-      // ========================================
-      // SUCCESS MESSAGE
-      // ========================================
-
       setSuccess("Discussion started successfully!");
 
       // ========================================
@@ -217,7 +362,7 @@ const StartDiscussion: React.FC = () => {
       const discussionId = response.data?.data?._id;
 
       // ========================================
-      // REDIRECT TO DETAILS PAGE
+      // REDIRECT
       // ========================================
 
       if (discussionId) {
@@ -230,16 +375,20 @@ const StartDiscussion: React.FC = () => {
         }, 800);
       }
     } catch (error: any) {
-      console.error("Create discussion error:", error);
+      console.error("Discussion submit error:", error);
 
-      console.error("API error response:", error.response?.data);
+      console.error("API error:", error.response?.data);
 
       if (error.response?.status === 401) {
         setError("Unauthorized. Please login again.");
       } else if (error.response?.data?.message) {
         setError(error.response.data.message);
       } else {
-        setError("Failed to start discussion.");
+        setError(
+          isEditMode
+            ? "Failed to update discussion."
+            : "Failed to start discussion.",
+        );
       }
     } finally {
       setLoading(false);
@@ -251,8 +400,30 @@ const StartDiscussion: React.FC = () => {
   // ==========================================
 
   const handleCancel = () => {
-    navigate("/discussion");
+    if (isEditMode && id) {
+      navigate(`/discussion/${id}`);
+    } else {
+      navigate("/discussion");
+    }
   };
+
+  // ==========================================
+  // PAGE LOADING FOR EDIT
+  // ==========================================
+
+  if (pageLoading) {
+    return (
+      <main className="col-lg-9 col-xl-10 main-wrap">
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+
+          <p className="text-muted mt-3">Loading discussion...</p>
+        </div>
+      </main>
+    );
+  }
 
   // ==========================================
   // JSX
@@ -289,27 +460,33 @@ const StartDiscussion: React.FC = () => {
 
         <span className="mx-1 text-muted">&gt;</span>
 
-        <span className="current">Start Discussion</span>
+        <span className="current">
+          {isEditMode ? "Edit Discussion" : "Start Discussion"}
+        </span>
       </div>
 
       {/* ======================================
           PAGE TITLE
       ====================================== */}
 
-      <h1 className="page-title mb-1">Start a New Discussion</h1>
+      <h1 className="page-title mb-1">
+        {isEditMode ? "Edit Discussion" : "Start a New Discussion"}
+      </h1>
 
       <p className="page-subtitle mb-4">
-        Share your thoughts and start a meaningful conversation.
+        {isEditMode
+          ? "Update your discussion details."
+          : "Share your thoughts and start a meaningful conversation."}
       </p>
 
       {/* ======================================
-          ERROR MESSAGE
+          ERROR
       ====================================== */}
 
       {error && <div className="alert alert-danger">{error}</div>}
 
       {/* ======================================
-          SUCCESS MESSAGE
+          SUCCESS
       ====================================== */}
 
       {success && <div className="alert alert-success">{success}</div>}
@@ -382,7 +559,7 @@ const StartDiscussion: React.FC = () => {
           </label>
 
           <div className="editor-wrap">
-            {/* EDITOR TOOLBAR */}
+            {/* TOOLBAR */}
 
             <div className="editor-toolbar">
               <button type="button" className="editor-tool" title="Bold">
@@ -410,7 +587,7 @@ const StartDiscussion: React.FC = () => {
               </button>
             </div>
 
-            {/* EDITOR BODY */}
+            {/* EDITOR */}
 
             <div className="editor-body">
               <textarea
@@ -432,13 +609,52 @@ const StartDiscussion: React.FC = () => {
         </div>
 
         {/* ====================================
-            IMAGE UPLOAD
+            IMAGE
         ==================================== */}
 
         <div className="mb-4">
           <label className="field-label mb-2">
             Upload Image <span className="optional">(Optional)</span>
           </label>
+
+          {/* EXISTING IMAGE */}
+
+          {existingImage && !image && (
+            <div className="mb-3">
+              <div className="mb-2">
+                <small className="text-muted">Current Image</small>
+              </div>
+
+              <div
+                style={{
+                  position: "relative",
+                  display: "inline-block",
+                }}
+              >
+                <img
+                  src={`http://localhost:3000${existingImage}`}
+                  alt="Current discussion"
+                  style={{
+                    width: "200px",
+                    height: "130px",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                    border: "1px solid #ddd",
+                  }}
+                />
+
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger ms-2"
+                  onClick={handleRemoveExistingImage}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* UPLOAD BOX */}
 
           <label
             htmlFor="fileInput"
@@ -472,7 +688,7 @@ const StartDiscussion: React.FC = () => {
             />
           </label>
 
-          {/* SELECTED IMAGE */}
+          {/* NEW IMAGE */}
 
           {image && (
             <div className="mt-2">
@@ -510,8 +726,11 @@ const StartDiscussion: React.FC = () => {
                   className="spinner-border spinner-border-sm me-2"
                   role="status"
                 ></span>
-                Starting...
+
+                {isEditMode ? "Updating..." : "Starting..."}
               </>
+            ) : isEditMode ? (
+              "Update Discussion"
             ) : (
               "Start Discussion"
             )}

@@ -1,103 +1,28 @@
 const Discussion = require("../models/Discussion");
 const Category = require("../models/Category");
 
-/**
- * POST /api/discussions
- * Start a new discussion
- */
-const startDiscussion = async (req, res) => {
-  try {
-    console.log("Discussion body:", req.body);
-    console.log("Discussion image:", req.file);
-
-    const { title, description, categoryId } = req.body;
-
-    // Validate required fields
-    if (!title || !description || !categoryId) {
-      return res.status(400).json({
-        message: "Title, description and category are required",
-      });
-    }
-
-    // Check category
-    const category = await Category.findById(categoryId);
-
-    if (!category) {
-      return res.status(404).json({
-        message: "Category not found",
-      });
-    }
-
-    // Save image path
-    let image = "";
-
-    if (req.file) {
-      image = `/uploads/discussions/${req.file.filename}`;
-    }
-
-    // Create discussion
-    const discussion = await Discussion.create({
-      title: title.trim(),
-      description: description.trim(),
-      category: categoryId,
-      createdBy: req.user._id,
-      image,
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: "Discussion started successfully",
-      data: discussion,
-    });
-  } catch (error) {
-    console.error("Start discussion error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to start discussion",
-      error: error.message,
-    });
-  }
-};
-
-/**
- * GET /api/discussions
- * Get all discussions
- */
-const getDiscussions = async (req, res) => {
-  try {
-    const discussions = await Discussion.find()
-      .populate("category", "name")
-      .populate("createdBy", "name email")
-      .sort({ createdAt: -1 });
-
-    return res.status(200).json({
-      success: true,
-      message: "Discussions fetched successfully",
-      data: discussions,
-    });
-  } catch (error) {
-    console.error("Get discussions error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch discussions",
-      error: error.message,
-    });
-  }
-};
-
 // ==========================================
-// GET SINGLE DISCUSSION
-// GET /api/discussions/:id
+// UPDATE DISCUSSION
 // ==========================================
-const getDiscussionById = async (req, res) => {
+/**
+ * PATCH /api/discussions/:id
+ * Update discussion
+ */
+const updateDiscussion = async (req, res) => {
   try {
+    console.log("========== UPDATE DISCUSSION ==========");
+    console.log("Discussion ID:", req.params.id);
+    console.log("Body:", req.body);
+    console.log("File:", req.file);
+
     const { id } = req.params;
+    const { title, description, categoryId, removeImage } = req.body;
 
-    const discussion = await Discussion.findById(id)
-      .populate("category", "name")
-      .populate("createdBy", "name email");
+    // ==========================================
+    // FIND DISCUSSION
+    // ==========================================
+
+    const discussion = await Discussion.findById(id);
 
     if (!discussion) {
       return res.status(404).json({
@@ -106,26 +31,117 @@ const getDiscussionById = async (req, res) => {
       });
     }
 
+    // ==========================================
+    // CHECK OWNER
+    // ==========================================
+
+    if (
+      discussion.createdBy.toString() !==
+      req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to edit this discussion",
+      });
+    }
+
+    // ==========================================
+    // VALIDATION
+    // ==========================================
+
+    if (!title || !description || !categoryId) {
+      return res.status(400).json({
+        success: false,
+        message: "Title, description and category are required",
+      });
+    }
+
+    // ==========================================
+    // CHECK CATEGORY
+    // ==========================================
+
+    const category = await Category.findById(categoryId);
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    // ==========================================
+    // UPDATE BASIC DATA
+    // ==========================================
+
+    discussion.title = title.trim();
+
+    discussion.description = description.trim();
+
+    discussion.category = categoryId;
+
+    // ==========================================
+    // UPDATE IMAGE
+    // ==========================================
+
+    if (req.file) {
+      // New image uploaded
+      discussion.image =
+        `/uploads/discussions/${req.file.filename}`;
+
+      console.log(
+        "New image:",
+        discussion.image,
+      );
+    } else if (removeImage === "true") {
+      // User removed existing image
+      discussion.image = "";
+
+      console.log("Existing image removed");
+    }
+
+    // ==========================================
+    // SAVE
+    // ==========================================
+
+    await discussion.save();
+
+    // ==========================================
+    // RETURN UPDATED DATA
+    // ==========================================
+
+    const updatedDiscussion =
+      await Discussion.findById(id)
+        .populate("category", "name")
+        .populate("createdBy", "name email");
+
+    console.log(
+      "Updated discussion:",
+      updatedDiscussion,
+    );
+
     return res.status(200).json({
       success: true,
-      message: "Discussion fetched successfully",
-      data: discussion,
+      message: "Discussion updated successfully",
+      data: updatedDiscussion,
     });
+
   } catch (error) {
-    console.error("Get discussion by ID error:", error);
+    console.error(
+      "Update discussion error:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch discussion",
+      message: "Failed to update discussion",
       error: error.message,
     });
   }
 };
 
-
-
 module.exports = {
   startDiscussion,
   getDiscussions,
-  getDiscussionById
+  getDiscussionById,
+  updateDiscussion,
 };

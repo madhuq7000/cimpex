@@ -38,7 +38,7 @@ export default function Login() {
       login(res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      navigate("/dashboard");
+      navigate("/discussion");
     } catch (err: any) {
       setError(err.response?.data?.message || "Login failed");
     } finally {

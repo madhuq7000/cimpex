@@ -116,7 +116,7 @@ const Discussion: React.FC = () => {
   // VIEW DISCUSSION
   // ==========================================
   const handleViewDiscussion = (discussionId: string) => {
-    navigate(`/${discussionId}`);
+    navigate(`/discussion/${discussionId}`);
   };
 
   // ==========================================

@@ -312,7 +312,7 @@ const StartDiscussion: React.FC = () => {
       // ========================================
 
       if (isEditMode && id) {
-        const response = await axios.patch(
+        const response = await axios.put(
           `https://www.vaadsamvaad.com/api/discussions/${id}`,
           formData,
           {

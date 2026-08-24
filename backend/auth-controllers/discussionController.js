@@ -33,7 +33,7 @@ const startDiscussion = async (req, res) => {
     let image = "";
 
     if (req.file) {
-      image = `/uploads/discussions/${req.file.filename}`;
+      image = `/var/www/vaadsamvaad/uploads/discussions/${req.file.filename}`;
     }
 
     const discussion = await Discussion.create({
@@ -194,7 +194,7 @@ const updateDiscussion = async (req, res) => {
 
     // New image
     if (req.file) {
-      discussion.image = `/uploads/discussions/${req.file.filename}`;
+      discussion.image = `/var/www/vaadsamvaad/uploads/discussions/${req.file.filename}`;
 
       console.log("New image:", discussion.image);
     } else if (removeImage === "true") {

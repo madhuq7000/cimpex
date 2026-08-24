@@ -42,14 +42,7 @@
     top:0;
     z-index: 1030;
   }
-  .brand-mark{
-    width:34px; height:34px;
-    border-radius:9px;
-    background: linear-gradient(135deg,#7C3AED,#4C1D95);
-    display:flex; align-items:center; justify-content:center;
-    color:#fff;
-    flex-shrink:0;
-  }
+
   .brand-name{
     font-size:19px;
     font-weight:700;
@@ -299,20 +292,7 @@
     margin-bottom: 2.25rem;
     letter-spacing:-.02em;
   }
-  .feature-icon{
-    width:56px; height:56px;
-    border-radius:14px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:22px;
-    margin: 0 auto 14px;
-  }
-  .feature-icon.purple{ background: var(--purple-light); color: var(--purple); }
-  .feature-icon.green{ background: var(--green-bg); color: var(--green-text); }
-  .feature-icon.orange{ background:#FEF3C7; color:#D97706; }
-  .feature-icon.red{ background:#FEE2E2; color:#DC2626; }
-  .feature-item{ text-align:center; }
-  .feature-item h5{ font-size:15.5px; font-weight:700; margin-bottom:6px; }
-  .feature-item p{ font-size:13.5px; color: var(--ink-soft); margin:0; }
+
 
   /* Offcanvas sidebar tweaks for mobile */
   @media (max-width: 991.98px){

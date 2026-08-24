@@ -68,7 +68,7 @@ const StartDiscussion: React.FC = () => {
         setCategoryLoading(true);
 
         const response = await axios.get(
-          "http://localhost:3000/api/categories",
+          "https://www.vaadsamvaad.com/api/categories",
         );
 
         console.log("Category API response:", response.data);
@@ -110,7 +110,7 @@ const StartDiscussion: React.FC = () => {
         console.log("Fetching discussion for edit:", id);
 
         const response = await axios.get(
-          `http://localhost:3000/api/discussions/${id}`,
+          `https://www.vaadsamvaad.com/api/discussions/${id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -313,7 +313,7 @@ const StartDiscussion: React.FC = () => {
 
       if (isEditMode && id) {
         const response = await axios.patch(
-          `http://localhost:3000/api/discussions/${id}`,
+          `https://www.vaadsamvaad.com/api/discussions/${id}`,
           formData,
           {
             headers: {
@@ -342,7 +342,7 @@ const StartDiscussion: React.FC = () => {
       // ========================================
 
       const response = await axios.post(
-        "http://localhost:3000/api/discussions",
+        "https://www.vaadsamvaad.com/api/discussions",
         formData,
         {
           headers: {
@@ -632,7 +632,7 @@ const StartDiscussion: React.FC = () => {
                 }}
               >
                 <img
-                  src={`http://localhost:3000${existingImage}`}
+                  src={`https://www.vaadsamvaad.com${existingImage}`}
                   alt="Current discussion"
                   style={{
                     width: "200px",

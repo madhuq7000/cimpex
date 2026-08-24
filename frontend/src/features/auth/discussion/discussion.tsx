@@ -49,7 +49,7 @@ const Discussion: React.FC = () => {
         setError("");
 
         const response = await axios.get(
-          "http://localhost:3000/api/discussions",
+          "https://www.vaadsamvaad.com/api/discussions",
         );
 
         console.log("Discussion API response:", response.data);
@@ -77,7 +77,7 @@ const Discussion: React.FC = () => {
         setCategoryError("");
 
         const response = await axios.get(
-          "http://localhost:3000/api/categories",
+          "https://www.vaadsamvaad.com/api/categories",
         );
 
         console.log("Category API response:", response.data);
@@ -223,7 +223,7 @@ const Discussion: React.FC = () => {
                       <div className="thumb">
                         {discussion.image ? (
                           <img
-                            src={`http://localhost:3000${discussion.image}`}
+                            src={`https://www.vaadsamvaad.com${discussion.image}`}
                             alt={discussion.title}
                           />
                         ) : (

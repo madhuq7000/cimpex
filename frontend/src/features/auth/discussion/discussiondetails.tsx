@@ -144,7 +144,7 @@ const DiscussionDetails: React.FC = () => {
         }
 
         const response = await axios.get(
-          `http://localhost:3000/api/discussions/${id}`,
+          `https://www.vaadsamvaad.com/api/discussions/${id}`,
         );
 
         console.log("Discussion details API response:", response.data);
@@ -410,7 +410,7 @@ const DiscussionDetails: React.FC = () => {
         {discussion.image ? (
           <div className="hero-banner mb-1">
             <img
-              src={`http://localhost:3000${discussion.image}`}
+              src={`https://www.vaadsamvaad.com${discussion.image}`}
               alt={discussion.title}
               style={{
                 width: "100%",

@@ -10,7 +10,7 @@ export interface RegisterPayload {
   name: string;
   email: string;
   password: string;
-  agreeTerms: string;
+  agreeTerms: boolean;
 }
 
 export interface User {

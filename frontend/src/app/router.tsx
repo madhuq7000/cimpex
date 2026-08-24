@@ -7,11 +7,6 @@ import Register from "../features/auth/pages/Register";
 
 import ProtectedRoute from "../core/guards/ProtectedRoute";
 
-import AddProduct from "../features/auth/product/pages/AddProduct";
-import EditProduct from "../features/auth/product/pages/EditProduct";
-import ProductList from "../features/auth/product/pages/ProductList";
-import ProductDetails from "../features/auth/product/pages/productDetails";
-
 import AddCategory from "../features/category/pages/AddCategory";
 import Discussion from "../features/auth/discussion/discussion";
 import DiscussionDetails from "../features/auth/discussion/discussiondetails";
@@ -37,12 +32,6 @@ export default function AppRouter() {
         >
           <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route path="/product-list" element={<ProductList />} />
-          <Route path="/product-list/:name" element={<ProductList />} />
-          <Route path="/products/:id" element={<ProductDetails />} />
-
-          <Route path="/add-product" element={<AddProduct />} />
-          <Route path="/edit-product/:id" element={<EditProduct />} />
           <Route path="/add-category" element={<AddCategory />} />
           <Route path="/discussion" element={<Discussion />} />
           <Route path="/discussion/:id" element={<DiscussionDetails />} />

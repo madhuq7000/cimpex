@@ -114,9 +114,7 @@ export default function Register() {
 
           <form onSubmit={submit}>
             <div className="mb-3">
-              <label className="field-label" for="fullName">
-                Full Name
-              </label>
+              <label className="field-label">Full Name</label>
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
                   <i className="bi bi-person"></i>
@@ -132,9 +130,7 @@ export default function Register() {
             </div>
 
             <div className="mb-3">
-              <label className="field-label" for="email">
-                Email Address
-              </label>
+              <label className="field-label">Email Address</label>
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
                   <i className="bi bi-envelope"></i>
@@ -150,9 +146,7 @@ export default function Register() {
             </div>
 
             <div className="mb-3">
-              <label className="field-label" for="username">
-                Username
-              </label>
+              <label className="field-label">Username</label>
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
                   <i className="bi bi-at"></i>
@@ -168,9 +162,7 @@ export default function Register() {
             </div>
 
             <div className="mb-3">
-              <label className="field-label" for="password">
-                Password
-              </label>
+              <label className="field-label">Password</label>
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
                   <i className="bi bi-lock"></i>
@@ -182,20 +174,14 @@ export default function Register() {
                   placeholder="Create a password"
                   onChange={handleChange}
                 />
-                <button
-                  type="button"
-                  className="toggle-eye"
-                  onclick="togglePassword('password','eyeIcon1')"
-                >
+                <button type="button" className="toggle-eye">
                   <i className="bi bi-eye" id="eyeIcon1"></i>
                 </button>
               </div>
             </div>
 
             <div className="mb-3">
-              <label className="field-label" for="confirmPassword">
-                Confirm Password
-              </label>
+              <label className="field-label">Confirm Password</label>
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
                   <i className="bi bi-lock"></i>
@@ -207,11 +193,7 @@ export default function Register() {
                   placeholder="Confirm your password"
                   onChange={handleChange}
                 />
-                <button
-                  type="button"
-                  className="toggle-eye"
-                  onclick="togglePassword('confirmPassword','eyeIcon2')"
-                >
+                <button type="button" className="toggle-eye">
                   <i className="bi bi-eye" id="eyeIcon2"></i>
                 </button>
               </div>
@@ -224,7 +206,7 @@ export default function Register() {
                 name="agreeTerms"
                 onChange={handleChange}
               />
-              <label className="form-check-label" for="agreeTerms">
+              <label className="form-check-label">
                 I agree to the <a href="#">Terms of Service</a> and{" "}
                 <a href="#">Privacy Policy</a>
               </label>

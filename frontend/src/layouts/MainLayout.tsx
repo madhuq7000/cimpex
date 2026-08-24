@@ -10,7 +10,7 @@ import logoImage from "../assets/images/logo.png";
 const MainLayout: FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [setSelectedCategory] = useState("All");
 
   useEffect(() => {
     const loadCategories = async () => {

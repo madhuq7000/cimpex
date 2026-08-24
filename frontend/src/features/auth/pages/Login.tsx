@@ -142,9 +142,7 @@ export default function Login() {
 
           <form onSubmit={submit}>
             <div className="mb-3">
-              <label className="field-label" for="email">
-                Email Address
-              </label>
+              <label className="field-label">Email Address</label>
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
                   <i className="bi bi-envelope"></i>
@@ -163,9 +161,7 @@ export default function Login() {
             </div>
 
             <div className="mb-3">
-              <label className="field-label" for="email">
-                Password
-              </label>
+              <label className="field-label">Password</label>
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
                   <i className="bi bi-lock"></i>

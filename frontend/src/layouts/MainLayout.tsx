@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FC } from "react";
+
 import { Link, Outlet, useNavigate } from "react-router-dom";
 
 import "./MainLayout.css";
@@ -29,7 +30,7 @@ const MainLayout: FC = () => {
   // AUTH
   // ==========================================
 
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
 
   // ==========================================
   // LOGGED IN USER
@@ -67,12 +68,6 @@ const MainLayout: FC = () => {
     });
   };
 
-  const DiscussionFun = () => {
-    navigate("/discussion", {
-      replace: true,
-    });
-  };
-
   // ==========================================
   // GET CATEGORIES
   // ==========================================
@@ -99,6 +94,8 @@ const MainLayout: FC = () => {
 
       <header className="topbar d-flex align-items-center justify-content-between gap-3">
         <div className="d-flex align-items-center gap-3">
+          {/* MOBILE MENU */}
+
           <button
             className="btn mobile-toggle p-2"
             type="button"
@@ -108,6 +105,8 @@ const MainLayout: FC = () => {
           >
             <i className="bi bi-list fs-4"></i>
           </button>
+
+          {/* LOGO */}
 
           <Link
             to="/discussion"
@@ -133,74 +132,86 @@ const MainLayout: FC = () => {
           />
         </div>
 
-        {/* ================= USER ================= */}
+        {/* ================= USER / GUEST ================= */}
 
         <div className="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
-          <div className="dropdown">
-            <a
-              className="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle"
-              href="#"
-              role="button"
-              data-bs-toggle="dropdown"
-              onClick={(e) => e.preventDefault()}
-            >
-              <span className="user-chip d-flex align-items-center gap-2">
-                <img
-                  src="https://i.pravatar.cc/72?img=13"
-                  alt={loggedInUser?.name || "User"}
-                />
+          {isAuthenticated ? (
+            <div className="dropdown">
+              <a
+                className="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle"
+                href="#"
+                role="button"
+                data-bs-toggle="dropdown"
+                onClick={(e) => e.preventDefault()}
+              >
+                <span className="user-chip d-flex align-items-center gap-2">
+                  <img
+                    src="https://i.pravatar.cc/72?img=13"
+                    alt={loggedInUser?.name || "User"}
+                  />
 
-                <span>{loggedInUser?.name || "User"}</span>
-              </span>
-            </a>
+                  <span>{loggedInUser?.name || "User"}</span>
+                </span>
+              </a>
 
-            <ul className="dropdown-menu dropdown-menu-end">
-              <li>
-                <div className="px-3 py-2">
-                  <div className="fw-semibold">
-                    {loggedInUser?.name || "User"}
+              <ul className="dropdown-menu dropdown-menu-end">
+                <li>
+                  <div className="px-3 py-2">
+                    <div className="fw-semibold">
+                      {loggedInUser?.name || "User"}
+                    </div>
+
+                    {loggedInUser?.email && (
+                      <small className="text-muted">{loggedInUser.email}</small>
+                    )}
                   </div>
+                </li>
 
-                  {loggedInUser?.email && (
-                    <small className="text-muted">{loggedInUser.email}</small>
-                  )}
-                </div>
-              </li>
+                <li>
+                  <hr className="dropdown-divider" />
+                </li>
 
-              <li>
-                <hr className="dropdown-divider" />
-              </li>
+                <li>
+                  <Link className="dropdown-item" to="/profile">
+                    <i className="bi bi-person me-2"></i>
+                    Profile
+                  </Link>
+                </li>
 
-              <li>
-                <Link className="dropdown-item" to="/profile">
-                  Profile
-                </Link>
-              </li>
+                <li>
+                  <Link className="dropdown-item" to="/settings">
+                    <i className="bi bi-gear me-2"></i>
+                    Settings
+                  </Link>
+                </li>
 
-              <li>
-                <Link className="dropdown-item" to="/settings">
-                  Settings
-                </Link>
-              </li>
+                <li>
+                  <hr className="dropdown-divider" />
+                </li>
 
-              <li>
-                <hr className="dropdown-divider" />
-              </li>
+                <li>
+                  <button
+                    type="button"
+                    className="dropdown-item text-danger logout"
+                    onClick={handleLogout}
+                  >
+                    <i className="bi bi-box-arrow-right me-2"></i>
+                    Log Out
+                  </button>
+                </li>
+              </ul>
+            </div>
+          ) : (
+            <div className="d-flex align-items-center gap-2">
+              <Link to="/login" className="btn btn-outline-primary btn-sm">
+                Login
+              </Link>
 
-              {/* ================= LOGOUT ================= */}
-
-              <li>
-                <button
-                  type="button"
-                  className="dropdown-item text-danger logout"
-                  onClick={handleLogout}
-                >
-                  <i className="bi bi-box-arrow-right me-2"></i>
-                  Log Out
-                </button>
-              </li>
-            </ul>
-          </div>
+              <Link to="/register" className="btn btn-primary btn-sm">
+                Register
+              </Link>
+            </div>
+          )}
         </div>
       </header>
 
@@ -213,79 +224,117 @@ const MainLayout: FC = () => {
           <aside className="col-lg-3 col-xl-2 px-0 sidebar-col">
             <div className="sidebar">
               <nav className="nav flex-column mb-3">
-                <Link to="/add-category" className="nav-link-custom">
-                  <i className="bi bi-plus-circle-fill"></i>
-                  Add Category
-                </Link>
+                {/* PUBLIC */}
 
                 <Link to="/discussion" className="nav-link-custom">
                   <i className="bi bi-search"></i>
                   Browse Discussions
                 </Link>
 
-                <Link to="/my-discussions" className="nav-link-custom">
-                  <i className="bi bi-pencil-square"></i>
-                  My Discussions
-                </Link>
+                {/* LOGGED-IN ONLY */}
 
-                <Link to="/bookmarks" className="nav-link-custom">
-                  <i className="bi bi-bookmark-fill"></i>
-                  Bookmarks
-                </Link>
+                {isAuthenticated && (
+                  <>
+                    <Link to="/add-category" className="nav-link-custom">
+                      <i className="bi bi-plus-circle-fill"></i>
+                      Add Category
+                    </Link>
 
-                <Link to="/notifications" className="nav-link-custom">
-                  <i className="bi bi-bell-fill"></i>
-                  Notifications
-                </Link>
+                    <Link to="/my-discussions" className="nav-link-custom">
+                      <i className="bi bi-pencil-square"></i>
+                      My Discussions
+                    </Link>
 
-                <Link to="/profile" className="nav-link-custom">
-                  <i className="bi bi-person-fill"></i>
-                  Profile
-                </Link>
+                    <Link to="/bookmarks" className="nav-link-custom">
+                      <i className="bi bi-bookmark-fill"></i>
+                      Bookmarks
+                    </Link>
 
-                <Link to="/settings" className="nav-link-custom">
-                  <i className="bi bi-gear-fill"></i>
-                  Settings
-                </Link>
+                    <Link to="/notifications" className="nav-link-custom">
+                      <i className="bi bi-bell-fill"></i>
+                      Notifications
+                    </Link>
+
+                    <Link to="/profile" className="nav-link-custom">
+                      <i className="bi bi-person-fill"></i>
+                      Profile
+                    </Link>
+
+                    <Link to="/settings" className="nav-link-custom">
+                      <i className="bi bi-gear-fill"></i>
+                      Settings
+                    </Link>
+                  </>
+                )}
               </nav>
 
               {/* ================= START DISCUSSION ================= */}
 
-              <Link
-                to="/start-discussion"
-                className="start-btn d-flex align-items-center justify-content-center gap-2"
-                style={{
-                  color: "#fff",
-                  textDecoration: "none",
-                }}
-              >
-                <i className="bi bi-plus-lg"></i>
-                Start Discussion
-              </Link>
+              {isAuthenticated ? (
+                <Link
+                  to="/start-discussion"
+                  className="start-btn d-flex align-items-center justify-content-center gap-2"
+                  style={{
+                    color: "#fff",
+                    textDecoration: "none",
+                  }}
+                >
+                  <i className="bi bi-plus-lg"></i>
+                  Start Discussion
+                </Link>
+              ) : (
+                <Link
+                  to="/login"
+                  className="start-btn d-flex align-items-center justify-content-center gap-2"
+                  style={{
+                    color: "#fff",
+                    textDecoration: "none",
+                  }}
+                >
+                  <i className="bi bi-box-arrow-in-right"></i>
+                  Login to Start Discussion
+                </Link>
+              )}
 
-              {/* ================= DESKTOP PROFILE ================= */}
+              {/* ================= PROFILE / GUEST ================= */}
 
-              <div className="mt-auto sidebar-profile">
-                <img
-                  src="https://i.pravatar.cc/72?img=13"
-                  alt={loggedInUser?.name || "User"}
-                />
+              {isAuthenticated ? (
+                <div className="mt-auto sidebar-profile">
+                  <img
+                    src="https://i.pravatar.cc/72?img=13"
+                    alt={loggedInUser?.name || "User"}
+                  />
 
-                <div>
-                  <div className="name">{loggedInUser?.name || "User"}</div>
+                  <div>
+                    <div className="name">{loggedInUser?.name || "User"}</div>
 
-                  <div className="email">{loggedInUser?.email || ""}</div>
+                    <div className="email">{loggedInUser?.email || ""}</div>
 
-                  <button
-                    type="button"
-                    className="logout-link"
-                    onClick={handleLogout}
-                  >
-                    <i className="bi bi-box-arrow-right me-1"></i>
-                    Log Out
-                  </button>
+                    <button
+                      type="button"
+                      className="logout-link"
+                      onClick={handleLogout}
+                    >
+                      <i className="bi bi-box-arrow-right me-1"></i>
+                      Log Out
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="mt-auto p-3">
+                  <div className="d-grid gap-2">
+                    <Link to="/login" className="btn btn-outline-primary">
+                      <i className="bi bi-box-arrow-in-right me-2"></i>
+                      Login
+                    </Link>
+
+                    <Link to="/register" className="btn btn-primary">
+                      <i className="bi bi-person-plus me-2"></i>
+                      Register
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           </aside>
 
@@ -321,14 +370,7 @@ const MainLayout: FC = () => {
                 }}
               >
                 <nav className="nav flex-column mb-3">
-                  <Link
-                    to="/add-category"
-                    className="nav-link-custom"
-                    data-bs-dismiss="offcanvas"
-                  >
-                    <i className="bi bi-plus-circle-fill"></i>
-                    Add Category
-                  </Link>
+                  {/* PUBLIC */}
 
                   <Link
                     to="/discussion"
@@ -339,91 +381,143 @@ const MainLayout: FC = () => {
                     Browse Discussions
                   </Link>
 
-                  <Link
-                    to="/my-discussions"
-                    className="nav-link-custom"
-                    data-bs-dismiss="offcanvas"
-                  >
-                    <i className="bi bi-pencil-square"></i>
-                    My Discussions
-                  </Link>
+                  {/* LOGGED-IN ONLY */}
 
-                  <Link
-                    to="/bookmarks"
-                    className="nav-link-custom"
-                    data-bs-dismiss="offcanvas"
-                  >
-                    <i className="bi bi-bookmark-fill"></i>
-                    Bookmarks
-                  </Link>
+                  {isAuthenticated && (
+                    <>
+                      <Link
+                        to="/add-category"
+                        className="nav-link-custom"
+                        data-bs-dismiss="offcanvas"
+                      >
+                        <i className="bi bi-plus-circle-fill"></i>
+                        Add Category
+                      </Link>
 
-                  <Link
-                    to="/notifications"
-                    className="nav-link-custom"
-                    data-bs-dismiss="offcanvas"
-                  >
-                    <i className="bi bi-bell-fill"></i>
-                    Notifications
-                  </Link>
+                      <Link
+                        to="/my-discussions"
+                        className="nav-link-custom"
+                        data-bs-dismiss="offcanvas"
+                      >
+                        <i className="bi bi-pencil-square"></i>
+                        My Discussions
+                      </Link>
 
-                  <Link
-                    to="/profile"
-                    className="nav-link-custom"
-                    data-bs-dismiss="offcanvas"
-                  >
-                    <i className="bi bi-person-fill"></i>
-                    Profile
-                  </Link>
+                      <Link
+                        to="/bookmarks"
+                        className="nav-link-custom"
+                        data-bs-dismiss="offcanvas"
+                      >
+                        <i className="bi bi-bookmark-fill"></i>
+                        Bookmarks
+                      </Link>
 
-                  <Link
-                    to="/settings"
-                    className="nav-link-custom"
-                    data-bs-dismiss="offcanvas"
-                  >
-                    <i className="bi bi-gear-fill"></i>
-                    Settings
-                  </Link>
+                      <Link
+                        to="/notifications"
+                        className="nav-link-custom"
+                        data-bs-dismiss="offcanvas"
+                      >
+                        <i className="bi bi-bell-fill"></i>
+                        Notifications
+                      </Link>
+
+                      <Link
+                        to="/profile"
+                        className="nav-link-custom"
+                        data-bs-dismiss="offcanvas"
+                      >
+                        <i className="bi bi-person-fill"></i>
+                        Profile
+                      </Link>
+
+                      <Link
+                        to="/settings"
+                        className="nav-link-custom"
+                        data-bs-dismiss="offcanvas"
+                      >
+                        <i className="bi bi-gear-fill"></i>
+                        Settings
+                      </Link>
+                    </>
+                  )}
                 </nav>
 
                 {/* ================= START DISCUSSION ================= */}
 
-                <Link
-                  to="/start-discussion"
-                  className="start-btn w-100 d-flex align-items-center justify-content-center gap-2"
-                  style={{
-                    color: "#fff",
-                    textDecoration: "none",
-                  }}
-                  data-bs-dismiss="offcanvas"
-                >
-                  <i className="bi bi-plus-lg"></i>
-                  Start Discussion
-                </Link>
+                {isAuthenticated ? (
+                  <Link
+                    to="/start-discussion"
+                    className="start-btn w-100 d-flex align-items-center justify-content-center gap-2"
+                    style={{
+                      color: "#fff",
+                      textDecoration: "none",
+                    }}
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-plus-lg"></i>
+                    Start Discussion
+                  </Link>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="start-btn w-100 d-flex align-items-center justify-content-center gap-2"
+                    style={{
+                      color: "#fff",
+                      textDecoration: "none",
+                    }}
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-box-arrow-in-right"></i>
+                    Login to Start Discussion
+                  </Link>
+                )}
 
-                {/* ================= MOBILE PROFILE ================= */}
+                {/* ================= PROFILE / GUEST ================= */}
 
-                <div className="sidebar-profile">
-                  <img
-                    src="https://i.pravatar.cc/72?img=13"
-                    alt={loggedInUser?.name || "User"}
-                  />
+                {isAuthenticated ? (
+                  <div className="sidebar-profile">
+                    <img
+                      src="https://i.pravatar.cc/72?img=13"
+                      alt={loggedInUser?.name || "User"}
+                    />
 
-                  <div>
-                    <div className="name">{loggedInUser?.name || "User"}</div>
+                    <div>
+                      <div className="name">{loggedInUser?.name || "User"}</div>
 
-                    <div className="email">{loggedInUser?.email || ""}</div>
+                      <div className="email">{loggedInUser?.email || ""}</div>
 
-                    <button
-                      type="button"
-                      className="logout-link"
-                      onClick={handleLogout}
-                      data-bs-dismiss="offcanvas"
-                    >
-                      <i className="bi bi-box-arrow-right me-1"></i>
-                      Log Out
-                    </button>
+                      <button
+                        type="button"
+                        className="logout-link"
+                        onClick={handleLogout}
+                        data-bs-dismiss="offcanvas"
+                      >
+                        <i className="bi bi-box-arrow-right me-1"></i>
+                        Log Out
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-3">
+                    <div className="d-grid gap-2">
+                      <Link
+                        to="/login"
+                        className="btn btn-outline-primary"
+                        data-bs-dismiss="offcanvas"
+                      >
+                        Login
+                      </Link>
+
+                      <Link
+                        to="/register"
+                        className="btn btn-primary"
+                        data-bs-dismiss="offcanvas"
+                      >
+                        Register
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -449,8 +543,6 @@ const MainLayout: FC = () => {
 
         <div className="container">
           <div className="row g-4">
-            {/* ================= FEATURE 1 ================= */}
-
             <div className="col-6 col-md-3">
               <div className="feature-item">
                 <div className="feature-icon purple">
@@ -462,8 +554,6 @@ const MainLayout: FC = () => {
                 <p>Engage in conversations that matter and make an impact.</p>
               </div>
             </div>
-
-            {/* ================= FEATURE 2 ================= */}
 
             <div className="col-6 col-md-3">
               <div className="feature-item">
@@ -477,8 +567,6 @@ const MainLayout: FC = () => {
               </div>
             </div>
 
-            {/* ================= FEATURE 3 ================= */}
-
             <div className="col-6 col-md-3">
               <div className="feature-item">
                 <div className="feature-icon orange">
@@ -490,8 +578,6 @@ const MainLayout: FC = () => {
                 <p>Connect with like-minded people and grow together.</p>
               </div>
             </div>
-
-            {/* ================= FEATURE 4 ================= */}
 
             <div className="col-6 col-md-3">
               <div className="feature-item">

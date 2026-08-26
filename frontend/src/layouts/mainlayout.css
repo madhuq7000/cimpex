@@ -683,4 +683,12 @@
   .headerLogo{
     width:51px !important;
   }
+  .editor-toolbar button{
+    border:none !important;
+    background:transparent !important;
+  }
+  .logout{
+    border:none !important;
+    background:transparent !important;
+  }
 

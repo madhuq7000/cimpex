@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+
 import axios from "axios";
+import DOMPurify from "dompurify";
+
+import { useAuth } from "../../../core/context/AuthContext";
+
+// ==========================================
+// DISCUSSION
+// ==========================================
 
 interface Discussion {
   _id: string;
@@ -22,35 +30,72 @@ interface Discussion {
   createdAt?: string;
 }
 
-interface Opinion {
-  id: number;
-  name: string;
-  image: string;
-  time: string;
-  content: string;
-  likes: number;
-  replies: number;
-}
+// ==========================================
+// COMMENT
+// ==========================================
 
 interface Comment {
-  id: number;
-  name: string;
-  image: string;
-  time?: string;
-  content: string;
-  likes: number;
-  reply?: {
-    name: string;
-    image: string;
-    time: string;
-    content: string;
-    likes: number;
+  _id: string;
+
+  discussion?: string;
+
+  comment: string;
+
+  createdBy?: {
+    _id: string;
+    name?: string;
+    email?: string;
   };
+
+  status?: string;
+
+  createdAt?: string;
+  updatedAt?: string;
 }
+
+// ==========================================
+// LOGGED IN USER
+// ==========================================
+
+interface LoggedInUser {
+  id?: string;
+  _id?: string;
+  name?: string;
+  email?: string;
+  role?: string;
+}
+
+// ==========================================
+// SERVER
+// ==========================================
+
+const SERVER_URL = "http://localhost:3000";
+const API_URL = `${SERVER_URL}/api`;
 
 const DiscussionDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+
   const navigate = useNavigate();
+
+  // ==========================================
+  // AUTH
+  // ==========================================
+
+  const { isAuthenticated } = useAuth();
+
+  // ==========================================
+  // LOGGED IN USER
+  // ==========================================
+
+  const storedUser = localStorage.getItem("user");
+
+  let loggedInUser: LoggedInUser | null = null;
+
+  try {
+    loggedInUser = storedUser ? JSON.parse(storedUser) : null;
+  } catch (error) {
+    console.error("Invalid user data in localStorage:", error);
+  }
 
   // ==========================================
   // DISCUSSION STATE
@@ -63,70 +108,20 @@ const DiscussionDetails: React.FC = () => {
   const [error, setError] = useState<string>("");
 
   // ==========================================
-  // OPINION STATE
-  // ==========================================
-
-  const [opinionText, setOpinionText] = useState<string>("");
-
-  const [sortOpinions, setSortOpinions] = useState<string>("Latest");
-
-  // ==========================================
   // COMMENT STATE
   // ==========================================
 
+  const [comments, setComments] = useState<Comment[]>([]);
+
   const [commentText, setCommentText] = useState<string>("");
 
+  const [commentLoading, setCommentLoading] = useState<boolean>(false);
+
+  const [commentsLoading, setCommentsLoading] = useState<boolean>(true);
+
+  const [commentError, setCommentError] = useState<string>("");
+
   const [sortComments, setSortComments] = useState<string>("Latest");
-
-  // ==========================================
-  // TEMPORARY OPINIONS
-  // ==========================================
-
-  const [opinions] = useState<Opinion[]>([
-    {
-      id: 1,
-      name: "Rahul Kumar",
-      image: "https://i.pravatar.cc/80?img=12",
-      time: "2 hours ago",
-      content:
-        "I don't think AI will completely replace developers. Developers will need to learn how to work with AI and use it as a powerful tool. The demand for skilled developers will still be high.",
-      likes: 24,
-      replies: 4,
-    },
-    {
-      id: 2,
-      name: "Priya Sharma",
-      image: "https://i.pravatar.cc/80?img=5",
-      time: "1 hour ago",
-      content:
-        "AI will automate many repetitive tasks, but human creativity, problem-solving and decision-making will remain irreplaceable. Developers who adapt will thrive.",
-      likes: 12,
-      replies: 2,
-    },
-  ]);
-
-  // ==========================================
-  // TEMPORARY COMMENTS
-  // ==========================================
-
-  const [comments] = useState<Comment[]>([
-    {
-      id: 1,
-      name: "Amit Verma",
-      image: "https://i.pravatar.cc/80?img=33",
-      content:
-        "Very interesting perspective! I agree that adaptation is the key.",
-      likes: 5,
-      reply: {
-        name: "Rahul Kumar",
-        image: "https://i.pravatar.cc/80?img=12",
-        time: "45 minutes ago",
-        content:
-          "Yes, the future is about collaboration with AI, not competition.",
-        likes: 2,
-      },
-    },
-  ]);
 
   // ==========================================
   // GET DISCUSSION DETAILS
@@ -136,16 +131,16 @@ const DiscussionDetails: React.FC = () => {
     const fetchDiscussion = async () => {
       try {
         setLoading(true);
+
         setError("");
 
         if (!id) {
           setError("Discussion ID is missing.");
+
           return;
         }
 
-        const response = await axios.get(
-          `https://www.vaadsamvaad.com/api/discussions/${id}`,
-        );
+        const response = await axios.get(`${API_URL}/discussions/${id}`);
 
         console.log("Discussion details API response:", response.data);
 
@@ -163,51 +158,186 @@ const DiscussionDetails: React.FC = () => {
   }, [id]);
 
   // ==========================================
-  // POST OPINION
+  // LOAD COMMENTS
+  // PUBLIC
   // ==========================================
 
-  const handlePostOpinion = () => {
-    if (!opinionText.trim()) {
+  const loadComments = async () => {
+    if (!id) {
       return;
     }
 
-    console.log("Opinion:", opinionText);
+    try {
+      setCommentsLoading(true);
 
-    // API will be added later
-    // Example:
-    //
-    // await axios.post(
-    //   `http://localhost:3000/api/discussions/${id}/opinions`,
-    //   {
-    //     content: opinionText,
-    //   }
-    // );
+      setCommentError("");
 
-    setOpinionText("");
+      const response = await axios.get(`${API_URL}/comments/discussion/${id}`);
+
+      console.log("Comments API response:", response.data);
+
+      setComments(Array.isArray(response.data.data) ? response.data.data : []);
+    } catch (error: any) {
+      console.error("Failed to load comments:", error);
+
+      setComments([]);
+
+      setCommentError(
+        error.response?.data?.message || "Failed to load comments.",
+      );
+    } finally {
+      setCommentsLoading(false);
+    }
   };
 
   // ==========================================
-  // POST COMMENT
+  // LOAD COMMENTS ON PAGE LOAD
   // ==========================================
 
-  const handlePostComment = () => {
-    if (!commentText.trim()) {
+  useEffect(() => {
+    loadComments();
+  }, [id]);
+
+  // ==========================================
+  // POST COMMENT
+  // LOGIN REQUIRED
+  // ==========================================
+
+  const handlePostComment = async () => {
+    // ========================================
+    // AUTH CHECK
+    // ========================================
+
+    if (!isAuthenticated) {
+      navigate("/login");
+
       return;
     }
 
-    console.log("Comment:", commentText);
+    if (!id) {
+      return;
+    }
 
-    // API will be added later
-    // Example:
-    //
-    // await axios.post(
-    //   `http://localhost:3000/api/discussions/${id}/comments`,
-    //   {
-    //     content: commentText,
-    //   }
-    // );
+    // ========================================
+    // VALIDATE
+    // ========================================
 
-    setCommentText("");
+    if (!commentText.trim()) {
+      setCommentError("Please write a comment.");
+
+      return;
+    }
+
+    // ========================================
+    // TOKEN
+    // ========================================
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+
+      return;
+    }
+
+    try {
+      setCommentLoading(true);
+
+      setCommentError("");
+
+      // ========================================
+      // POST COMMENT
+      // ========================================
+
+      const response = await axios.post(
+        `${API_URL}/comments/discussion/${id}`,
+        {
+          comment: commentText.trim(),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log("COMMENT RESPONSE:", response.data);
+
+      // ========================================
+      // CLEAR COMMENT
+      // ========================================
+
+      setCommentText("");
+
+      // ========================================
+      // REFRESH COMMENTS
+      // ========================================
+
+      await loadComments();
+    } catch (error: any) {
+      console.error("COMMENT ERROR:", error);
+
+      console.error("COMMENT ERROR RESPONSE:", error.response?.data);
+
+      // Invalid / expired token
+      if (error.response?.status === 401) {
+        setCommentError("Your session has expired. Please login again.");
+
+        return;
+      }
+
+      setCommentError(
+        error.response?.data?.message || "Failed to post comment.",
+      );
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  // ==========================================
+  // ENTER KEY
+  // ==========================================
+
+  const handleCommentKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      handlePostComment();
+    }
+  };
+
+  // ==========================================
+  // SORT COMMENTS
+  // ==========================================
+
+  const sortedComments = [...comments].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+    if (sortComments === "Oldest") {
+      return dateA - dateB;
+    }
+
+    return dateB - dateA;
+  });
+
+  // ==========================================
+  // FORMAT COMMENT DATE
+  // ==========================================
+
+  const formatCommentDate = (date?: string) => {
+    if (!date) {
+      return "";
+    }
+
+    return new Date(date).toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   // ==========================================
@@ -274,7 +404,7 @@ const DiscussionDetails: React.FC = () => {
     discussion.createdBy?.name || discussion.createdBy?.email || "Unknown";
 
   // ==========================================
-  // DATE
+  // DISCUSSION DATE
   // ==========================================
 
   const discussionDate = discussion.createdAt
@@ -300,6 +430,7 @@ const DiscussionDetails: React.FC = () => {
           href="#"
           onClick={(e) => {
             e.preventDefault();
+
             navigate("/");
           }}
         >
@@ -312,6 +443,7 @@ const DiscussionDetails: React.FC = () => {
           href="#"
           onClick={(e) => {
             e.preventDefault();
+
             navigate("/discussion");
           }}
         >
@@ -329,20 +461,39 @@ const DiscussionDetails: React.FC = () => {
 
       <div className="discussion-card mb-4">
         {/* CATEGORY */}
+
         <span className="badge-tech d-inline-block mb-3">
           {discussion.category?.name || "General"}
         </span>
-        &nbsp;&nbsp;
-        <span
-          className="badge-tech d-inline-block mb-3"
-          style={{ cursor: "pointer" }}
-          onClick={() => navigate(`/discussion/edit/${discussion._id}`)}
-        >
-          Edit
-        </span>
+
+        {/* ====================================
+            EDIT
+            Only show when logged in
+        ==================================== */}
+
+        {isAuthenticated && (
+          <>
+            &nbsp;&nbsp;
+            <span
+              className="badge-tech d-inline-block mb-3"
+              style={{
+                cursor: "pointer",
+              }}
+              onClick={() => navigate(`/discussion/edit/${discussion._id}`)}
+            >
+              Edit
+            </span>
+          </>
+        )}
+
         {/* TITLE */}
+
         <h1 className="thread-title mb-3">{discussion.title}</h1>
-        {/* AUTHOR + DATE + STATS */}
+
+        {/* ======================================
+            AUTHOR + DATE + STATS
+        ====================================== */}
+
         <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
           {/* AUTHOR */}
 
@@ -371,6 +522,7 @@ const DiscussionDetails: React.FC = () => {
                       "en-IN",
                       {
                         hour: "2-digit",
+
                         minute: "2-digit",
                       },
                     )}
@@ -388,34 +540,43 @@ const DiscussionDetails: React.FC = () => {
             </span>
 
             <span className="stat-pill">
-              <i className="bi bi-geo-alt"></i> {opinions.length} Opinions
-            </span>
-
-            <span className="stat-pill">
               <i className="bi bi-chat"></i> {comments.length} Comments
             </span>
           </div>
         </div>
-        {/* DESCRIPTION */}
-        <p
-          className="mb-3"
+
+        {/* ======================================
+            DESCRIPTION
+        ====================================== */}
+
+        <div
+          className="mb-3 discussion-description"
           style={{
             color: "#374151",
+
             fontSize: ".95rem",
           }}
-        >
-          {discussion.description}
-        </p>
-        {/* DISCUSSION IMAGE */}
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(discussion.description),
+          }}
+        />
+
+        {/* ======================================
+            DISCUSSION IMAGE
+        ====================================== */}
+
         {discussion.image ? (
           <div className="hero-banner mb-1">
             <img
-              src={`https://www.vaadsamvaad.com${discussion.image}`}
+              src={`${SERVER_URL}${discussion.image}`}
               alt={discussion.title}
               style={{
                 width: "100%",
+
                 maxHeight: "450px",
+
                 objectFit: "cover",
+
                 borderRadius: "10px",
               }}
             />
@@ -427,115 +588,6 @@ const DiscussionDetails: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-
-      {/* ======================================
-          SHARE OPINION
-      ====================================== */}
-
-      <div className="discussion-card mb-4">
-        <h2 className="section-title mb-3">Share your opinion</h2>
-
-        <div className="d-flex align-items-start gap-2">
-          <img
-            src="https://i.pravatar.cc/80?img=13"
-            className="avatar"
-            alt="Current User"
-          />
-
-          <div className="flex-grow-1 d-flex flex-column flex-sm-row gap-2">
-            <textarea
-              className="form-control"
-              rows={1}
-              placeholder="Write your opinion here..."
-              value={opinionText}
-              onChange={(e) => setOpinionText(e.target.value)}
-            />
-
-            <button
-              type="button"
-              className="btn btn-brand px-4"
-              onClick={handlePostOpinion}
-            >
-              Post Opinion
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ======================================
-          OPINIONS
-      ====================================== */}
-
-      <div className="mb-4">
-        <div className="d-flex align-items-center justify-content-between mb-3">
-          <span className="opinions-count">Opinions ({opinions.length})</span>
-
-          <div className="d-flex align-items-center gap-1">
-            <span className="text-muted small">Sort by:</span>
-
-            <select
-              className="sort-select"
-              value={sortOpinions}
-              onChange={(e) => setSortOpinions(e.target.value)}
-            >
-              <option value="Latest">Latest</option>
-
-              <option value="Top">Top</option>
-
-              <option value="Oldest">Oldest</option>
-            </select>
-          </div>
-        </div>
-
-        {/* OPINION LIST */}
-
-        <div className="d-flex flex-column gap-3">
-          {opinions.map((opinion) => (
-            <div className="opinion-card" key={opinion.id}>
-              <div className="d-flex align-items-center gap-2 mb-1">
-                <img
-                  src={opinion.image}
-                  className="avatar-sm avatar"
-                  alt={opinion.name}
-                />
-
-                <span className="opinion-name">{opinion.name}</span>
-
-                <span className="opinion-time">&middot; {opinion.time}</span>
-
-                <i className="bi bi-three-dots ms-auto text-muted"></i>
-              </div>
-
-              <p className="opinion-body">{opinion.content}</p>
-
-              <div className="opinion-actions">
-                <span>
-                  <i className="bi bi-hand-thumbs-up"></i>
-                  {opinion.likes}
-                </span>
-
-                <span>
-                  <i className="bi bi-chat"></i>
-                  {opinion.replies}
-                </span>
-
-                <span>
-                  <i className="bi bi-reply"></i>
-                  Reply
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* VIEW MORE */}
-
-        <div className="text-center mt-3">
-          <button type="button" className="view-more-link btn btn-link">
-            View more opinions <i className="bi bi-chevron-down"></i>
-          </button>
-        </div>
       </div>
 
       {/* ======================================
@@ -556,112 +608,122 @@ const DiscussionDetails: React.FC = () => {
             >
               <option value="Latest">Latest</option>
 
-              <option value="Top">Top</option>
-
               <option value="Oldest">Oldest</option>
             </select>
           </div>
         </div>
 
-        {/* COMMENT LIST */}
+        {/* COMMENT ERROR */}
 
-        {comments.map((comment) => (
-          <div className="comment-thread mb-3" key={comment.id}>
-            {/* COMMENT AUTHOR */}
+        {commentError && (
+          <div className="alert alert-danger py-2">{commentError}</div>
+        )}
 
-            <div className="d-flex align-items-center gap-2 mb-1">
-              <img
-                src={comment.image}
-                className="avatar-sm avatar"
-                alt={comment.name}
-              />
+        {/* ======================================
+            COMMENT LIST
+        ====================================== */}
 
-              <span className="opinion-name">{comment.name}</span>
+        {commentsLoading ? (
+          <div className="text-center py-4">
+            <div
+              className="spinner-border spinner-border-sm"
+              role="status"
+            ></div>
 
-              {comment.time && (
-                <span className="opinion-time">{comment.time}</span>
-              )}
-            </div>
+            <span className="ms-2 text-muted">Loading comments...</span>
+          </div>
+        ) : sortedComments.length === 0 ? (
+          <div className="text-muted py-4 text-center">No comments yet.</div>
+        ) : (
+          sortedComments.map((comment) => {
+            const commentUserName =
+              comment.createdBy?.name || comment.createdBy?.email || "User";
 
-            {/* COMMENT TEXT */}
+            return (
+              <div className="comment-thread mb-3" key={comment._id}>
+                {/* COMMENT AUTHOR */}
 
-            <p className="opinion-body mb-1">{comment.content}</p>
-
-            {/* COMMENT ACTIONS */}
-
-            <div className="opinion-actions mb-0">
-              <span>
-                <i className="bi bi-hand-thumbs-up"></i>
-                {comment.likes}
-              </span>
-
-              <span>
-                <i className="bi bi-reply"></i>
-                Reply
-              </span>
-            </div>
-
-            {/* REPLY */}
-
-            {comment.reply && (
-              <div className="comment-reply">
-                <div className="d-flex align-items-center gap-2 mb-1">
+                <div className="d-flex align-items-center gap-2 mb-2">
                   <img
-                    src={comment.reply.image}
+                    src="https://i.pravatar.cc/80?img=13"
                     className="avatar-sm avatar"
-                    alt={comment.reply.name}
+                    alt={commentUserName}
                   />
 
-                  <span className="opinion-name">{comment.reply.name}</span>
+                  <div>
+                    <span className="opinion-name">{commentUserName}</span>
 
-                  <span className="opinion-time">{comment.reply.time}</span>
+                    {comment.createdAt && (
+                      <div className="opinion-time">
+                        {formatCommentDate(comment.createdAt)}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <p className="opinion-body mb-1">{comment.reply.content}</p>
+                {/* COMMENT */}
 
-                <div className="opinion-actions mb-0">
-                  <span>
-                    <i className="bi bi-hand-thumbs-up"></i>
-                    {comment.reply.likes}
-                  </span>
-
-                  <span>
-                    <i className="bi bi-reply"></i>
-                    Reply
-                  </span>
-                </div>
+                <p className="opinion-body mb-1">{comment.comment}</p>
               </div>
-            )}
-          </div>
-        ))}
+            );
+          })
+        )}
 
         {/* ======================================
             COMMENT COMPOSER
         ====================================== */}
 
-        <div className="composer-row d-flex align-items-center gap-2">
-          <img
-            src="https://i.pravatar.cc/80?img=13"
-            className="avatar"
-            alt="Current User"
-          />
+        {isAuthenticated ? (
+          // ====================================
+          // LOGGED IN
+          // ====================================
 
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Write a comment..."
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-          />
+          <div className="composer-row d-flex align-items-center gap-2 mt-4">
+            <img
+              src="https://i.pravatar.cc/80?img=13"
+              className="avatar"
+              alt={loggedInUser?.name || "Current User"}
+            />
 
-          <button
-            type="button"
-            className="btn btn-brand"
-            onClick={handlePostComment}
-          >
-            Comment
-          </button>
-        </div>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Write a comment..."
+              value={commentText}
+              onChange={(e) => {
+                setCommentText(e.target.value);
+
+                if (commentError) {
+                  setCommentError("");
+                }
+              }}
+              onKeyDown={handleCommentKeyDown}
+              disabled={commentLoading}
+            />
+
+            <button
+              type="button"
+              className="btn btn-brand"
+              onClick={handlePostComment}
+              disabled={commentLoading || !commentText.trim()}
+            >
+              {commentLoading ? "Posting..." : "Comment"}
+            </button>
+          </div>
+        ) : (
+          // ====================================
+          // NOT LOGGED IN
+          // ====================================
+
+          <div className="alert alert-light border mt-4 text-center">
+            <i className="bi bi-lock-fill me-2"></i>
+            Please{" "}
+            <Link to="/login" className="fw-semibold">
+              login
+            </Link>{" "}
+            to write a comment.
+          </div>
+        )}
       </div>
     </div>
   );

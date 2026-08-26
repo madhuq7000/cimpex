@@ -1,16 +1,81 @@
 import { useEffect, useState } from "react";
 import type { FC } from "react";
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 
 import "./MainLayout.css";
+
 import type { Category } from "../features/category/types";
 import { getCategoriesApi } from "../features/category/categoryApi";
 import logoImage from "../assets/images/logo.png";
 
+import { useAuth } from "../core/context/AuthContext";
+
+// ==========================================
+// LOGGED IN USER TYPE
+// ==========================================
+
+interface LoggedInUser {
+  id?: string;
+  _id?: string;
+  name?: string;
+  email?: string;
+  role?: string;
+}
+
 const MainLayout: FC = () => {
+  const navigate = useNavigate();
+
+  // ==========================================
+  // AUTH
+  // ==========================================
+
+  const { logout } = useAuth();
+
+  // ==========================================
+  // LOGGED IN USER
+  // ==========================================
+
+  const storedUser = localStorage.getItem("user");
+
+  let loggedInUser: LoggedInUser | null = null;
+
+  try {
+    loggedInUser = storedUser ? JSON.parse(storedUser) : null;
+  } catch (error) {
+    console.error("Invalid user data in localStorage:", error);
+  }
+
+  // ==========================================
+  // STATES
+  // ==========================================
+
   const [categories, setCategories] = useState<Category[]>([]);
+
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [setSelectedCategory] = useState("All");
+
+  const [, setSelectedCategory] = useState("All");
+
+  // ==========================================
+  // LOGOUT
+  // ==========================================
+
+  const handleLogout = () => {
+    logout();
+
+    navigate("/login", {
+      replace: true,
+    });
+  };
+
+  const DiscussionFun = () => {
+    navigate("/discussion", {
+      replace: true,
+    });
+  };
+
+  // ==========================================
+  // GET CATEGORIES
+  // ==========================================
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -45,7 +110,7 @@ const MainLayout: FC = () => {
           </button>
 
           <Link
-            to="/"
+            to="/discussion"
             className="d-flex align-items-center gap-2 text-decoration-none"
           >
             <img src={logoImage} className="headerLogo" alt="VaadSamvaad" />
@@ -77,15 +142,35 @@ const MainLayout: FC = () => {
               href="#"
               role="button"
               data-bs-toggle="dropdown"
+              onClick={(e) => e.preventDefault()}
             >
               <span className="user-chip d-flex align-items-center gap-2">
-                <img src="https://i.pravatar.cc/72?img=13" alt="Amit Kumar" />
+                <img
+                  src="https://i.pravatar.cc/72?img=13"
+                  alt={loggedInUser?.name || "User"}
+                />
 
-                <span>Amit Kumar</span>
+                <span>{loggedInUser?.name || "User"}</span>
               </span>
             </a>
 
             <ul className="dropdown-menu dropdown-menu-end">
+              <li>
+                <div className="px-3 py-2">
+                  <div className="fw-semibold">
+                    {loggedInUser?.name || "User"}
+                  </div>
+
+                  {loggedInUser?.email && (
+                    <small className="text-muted">{loggedInUser.email}</small>
+                  )}
+                </div>
+              </li>
+
+              <li>
+                <hr className="dropdown-divider" />
+              </li>
+
               <li>
                 <Link className="dropdown-item" to="/profile">
                   Profile
@@ -102,8 +187,17 @@ const MainLayout: FC = () => {
                 <hr className="dropdown-divider" />
               </li>
 
+              {/* ================= LOGOUT ================= */}
+
               <li>
-                <button className="dropdown-item text-danger">Log Out</button>
+                <button
+                  type="button"
+                  className="dropdown-item text-danger logout"
+                  onClick={handleLogout}
+                >
+                  <i className="bi bi-box-arrow-right me-2"></i>
+                  Log Out
+                </button>
               </li>
             </ul>
           </div>
@@ -119,12 +213,12 @@ const MainLayout: FC = () => {
           <aside className="col-lg-3 col-xl-2 px-0 sidebar-col">
             <div className="sidebar">
               <nav className="nav flex-column mb-3">
-                <Link to="/" className="nav-link-custom">
-                  <i className="bi bi-house-door-fill"></i>
-                  Home
+                <Link to="/add-category" className="nav-link-custom">
+                  <i className="bi bi-plus-circle-fill"></i>
+                  Add Category
                 </Link>
 
-                <Link to="/discussions" className="nav-link-custom">
+                <Link to="/discussion" className="nav-link-custom">
                   <i className="bi bi-search"></i>
                   Browse Discussions
                 </Link>
@@ -158,7 +252,7 @@ const MainLayout: FC = () => {
               {/* ================= START DISCUSSION ================= */}
 
               <Link
-                to="/startdiscussion"
+                to="/start-discussion"
                 className="start-btn d-flex align-items-center justify-content-center gap-2"
                 style={{
                   color: "#fff",
@@ -169,17 +263,25 @@ const MainLayout: FC = () => {
                 Start Discussion
               </Link>
 
-              {/* ================= PROFILE ================= */}
+              {/* ================= DESKTOP PROFILE ================= */}
 
               <div className="mt-auto sidebar-profile">
-                <img src="https://i.pravatar.cc/72?img=13" alt="Amit Kumar" />
+                <img
+                  src="https://i.pravatar.cc/72?img=13"
+                  alt={loggedInUser?.name || "User"}
+                />
 
                 <div>
-                  <div className="name">Amit Kumar</div>
+                  <div className="name">{loggedInUser?.name || "User"}</div>
 
-                  <div className="email">amit@example.com</div>
+                  <div className="email">{loggedInUser?.email || ""}</div>
 
-                  <button type="button" className="logout-link">
+                  <button
+                    type="button"
+                    className="logout-link"
+                    onClick={handleLogout}
+                  >
+                    <i className="bi bi-box-arrow-right me-1"></i>
                     Log Out
                   </button>
                 </div>
@@ -220,16 +322,16 @@ const MainLayout: FC = () => {
               >
                 <nav className="nav flex-column mb-3">
                   <Link
-                    to="/"
+                    to="/add-category"
                     className="nav-link-custom"
                     data-bs-dismiss="offcanvas"
                   >
-                    <i className="bi bi-house-door-fill"></i>
-                    Home
+                    <i className="bi bi-plus-circle-fill"></i>
+                    Add Category
                   </Link>
 
                   <Link
-                    to="/discussions"
+                    to="/discussion"
                     className="nav-link-custom"
                     data-bs-dismiss="offcanvas"
                   >
@@ -283,8 +385,10 @@ const MainLayout: FC = () => {
                   </Link>
                 </nav>
 
+                {/* ================= START DISCUSSION ================= */}
+
                 <Link
-                  to="/startdiscussion"
+                  to="/start-discussion"
                   className="start-btn w-100 d-flex align-items-center justify-content-center gap-2"
                   style={{
                     color: "#fff",
@@ -296,15 +400,26 @@ const MainLayout: FC = () => {
                   Start Discussion
                 </Link>
 
+                {/* ================= MOBILE PROFILE ================= */}
+
                 <div className="sidebar-profile">
-                  <img src="https://i.pravatar.cc/72?img=13" alt="Amit Kumar" />
+                  <img
+                    src="https://i.pravatar.cc/72?img=13"
+                    alt={loggedInUser?.name || "User"}
+                  />
 
                   <div>
-                    <div className="name">Amit Kumar</div>
+                    <div className="name">{loggedInUser?.name || "User"}</div>
 
-                    <div className="email">amit@example.com</div>
+                    <div className="email">{loggedInUser?.email || ""}</div>
 
-                    <button type="button" className="logout-link">
+                    <button
+                      type="button"
+                      className="logout-link"
+                      onClick={handleLogout}
+                      data-bs-dismiss="offcanvas"
+                    >
+                      <i className="bi bi-box-arrow-right me-1"></i>
                       Log Out
                     </button>
                   </div>
@@ -334,6 +449,8 @@ const MainLayout: FC = () => {
 
         <div className="container">
           <div className="row g-4">
+            {/* ================= FEATURE 1 ================= */}
+
             <div className="col-6 col-md-3">
               <div className="feature-item">
                 <div className="feature-icon purple">
@@ -345,6 +462,8 @@ const MainLayout: FC = () => {
                 <p>Engage in conversations that matter and make an impact.</p>
               </div>
             </div>
+
+            {/* ================= FEATURE 2 ================= */}
 
             <div className="col-6 col-md-3">
               <div className="feature-item">
@@ -358,6 +477,8 @@ const MainLayout: FC = () => {
               </div>
             </div>
 
+            {/* ================= FEATURE 3 ================= */}
+
             <div className="col-6 col-md-3">
               <div className="feature-item">
                 <div className="feature-icon orange">
@@ -369,6 +490,8 @@ const MainLayout: FC = () => {
                 <p>Connect with like-minded people and grow together.</p>
               </div>
             </div>
+
+            {/* ================= FEATURE 4 ================= */}
 
             <div className="col-6 col-md-3">
               <div className="feature-item">

@@ -2,6 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import LinkExtension from "@tiptap/extension-link";
+
 interface Category {
   _id: string;
   name: string;
@@ -18,11 +22,14 @@ interface Discussion {
   image?: string;
 }
 
+const SERVER_URL = "http://localhost:3000";
+const API_URL = `${SERVER_URL}/api`;
+
 const StartDiscussion: React.FC = () => {
   const navigate = useNavigate();
 
   // ==========================================
-  // GET ID FROM URL
+  // GET DISCUSSION ID
   // ==========================================
 
   const { id } = useParams<{ id: string }>();
@@ -36,27 +43,65 @@ const StartDiscussion: React.FC = () => {
   const [title, setTitle] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("");
   const [description, setDescription] = useState<string>("");
+
   const [image, setImage] = useState<File | null>(null);
 
-  // Existing image from database
+  // Existing image coming from database
   const [existingImage, setExistingImage] = useState<string>("");
+
+  // Used when user removes existing image
+  const [removeExistingImage, setRemoveExistingImage] =
+    useState<boolean>(false);
 
   // ==========================================
   // CATEGORY STATES
   // ==========================================
 
   const [categories, setCategories] = useState<Category[]>([]);
+
   const [categoryLoading, setCategoryLoading] = useState<boolean>(true);
 
   // ==========================================
-  // SUBMIT / PAGE STATES
+  // PAGE STATES
   // ==========================================
 
   const [loading, setLoading] = useState<boolean>(false);
+
   const [pageLoading, setPageLoading] = useState<boolean>(false);
 
   const [error, setError] = useState<string>("");
+
   const [success, setSuccess] = useState<string>("");
+
+  // ==========================================
+  // TIPTAP EDITOR
+  // ==========================================
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+
+      LinkExtension.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+      }),
+    ],
+
+    content: "",
+
+    editorProps: {
+      attributes: {
+        class: "tiptap-editor",
+      },
+    },
+
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+
+      setDescription(html);
+    },
+  });
 
   // ==========================================
   // GET CATEGORIES
@@ -67,9 +112,7 @@ const StartDiscussion: React.FC = () => {
       try {
         setCategoryLoading(true);
 
-        const response = await axios.get(
-          "https://www.vaadsamvaad.com/api/categories",
-        );
+        const response = await axios.get(`${API_URL}/categories`);
 
         console.log("Category API response:", response.data);
 
@@ -91,32 +134,31 @@ const StartDiscussion: React.FC = () => {
   // ==========================================
 
   useEffect(() => {
-    if (!isEditMode || !id) {
+    if (!isEditMode || !id || !editor) {
       return;
     }
 
     const fetchDiscussion = async () => {
       try {
         setPageLoading(true);
+
         setError("");
 
         const token = localStorage.getItem("token");
 
         if (!token) {
           setError("You are not logged in. Please login first.");
+
           return;
         }
 
         console.log("Fetching discussion for edit:", id);
 
-        const response = await axios.get(
-          `https://www.vaadsamvaad.com/api/discussions/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+        const response = await axios.get(`${API_URL}/discussions/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        );
+        });
 
         console.log("Discussion API response:", response.data);
 
@@ -124,20 +166,31 @@ const StartDiscussion: React.FC = () => {
 
         if (!discussion) {
           setError("Discussion not found.");
+
           return;
         }
 
         // ======================================
-        // PATCH DATABASE DATA INTO FORM
+        // PATCH DATABASE DATA
         // ======================================
 
         setTitle(discussion.title || "");
 
-        setDescription(discussion.description || "");
-
         setCategoryId(discussion.category?._id || "");
 
         setExistingImage(discussion.image || "");
+
+        setRemoveExistingImage(false);
+
+        const discussionDescription = discussion.description || "";
+
+        setDescription(discussionDescription);
+
+        // ======================================
+        // PATCH TIPTAP EDITOR
+        // ======================================
+
+        editor.commands.setContent(discussionDescription);
 
         console.log("Form patched with discussion data");
       } catch (error: any) {
@@ -156,7 +209,7 @@ const StartDiscussion: React.FC = () => {
     };
 
     fetchDiscussion();
-  }, [id, isEditMode]);
+  }, [id, isEditMode, editor]);
 
   // ==========================================
   // FILE CHANGE
@@ -198,10 +251,13 @@ const StartDiscussion: React.FC = () => {
     setError("");
 
     setImage(file);
+
+    // User selected another image
+    setRemoveExistingImage(false);
   };
 
   // ==========================================
-  // REMOVE IMAGE
+  // REMOVE NEW IMAGE
   // ==========================================
 
   const handleRemoveImage = () => {
@@ -222,16 +278,97 @@ const StartDiscussion: React.FC = () => {
 
   const handleRemoveExistingImage = () => {
     setExistingImage("");
+
+    setRemoveExistingImage(true);
   };
 
   // ==========================================
-  // SUBMIT DISCUSSION
+  // SET LINK
+  // ==========================================
+
+  const handleSetLink = () => {
+    if (!editor) {
+      return;
+    }
+
+    const previousUrl = editor.getAttributes("link").href || "";
+
+    const url = window.prompt("Enter URL:", previousUrl);
+
+    // User cancelled
+    if (url === null) {
+      return;
+    }
+
+    // Empty URL means remove existing link
+    if (url.trim() === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+
+      return;
+    }
+
+    let finalUrl = url.trim();
+
+    // Add https:// automatically
+    if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
+      finalUrl = `https://${finalUrl}`;
+    }
+
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({
+        href: finalUrl,
+      })
+      .run();
+  };
+
+  // ==========================================
+  // ADD EMOJI
+  // ==========================================
+
+  const handleEmoji = () => {
+    if (!editor) {
+      return;
+    }
+
+    const emoji = window.prompt("Enter emoji:", "😊");
+
+    if (!emoji) {
+      return;
+    }
+
+    editor.chain().focus().insertContent(emoji).run();
+  };
+
+  // ==========================================
+  // REMOVE LINK
+  // ==========================================
+
+  const handleRemoveLink = () => {
+    if (!editor) {
+      return;
+    }
+
+    editor.chain().focus().unsetLink().run();
+  };
+
+  // ==========================================
+  // GET PLAIN TEXT LENGTH
+  // ==========================================
+
+  const descriptionLength = editor?.getText().length || 0;
+
+  // ==========================================
+  // SUBMIT
   // ==========================================
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError("");
+
     setSuccess("");
 
     // ========================================
@@ -240,16 +377,28 @@ const StartDiscussion: React.FC = () => {
 
     if (!title.trim()) {
       setError("Discussion title is required.");
+
       return;
     }
 
     if (!categoryId) {
       setError("Please select a category.");
+
       return;
     }
 
-    if (!description.trim()) {
+    // Validate actual editor text
+    const plainText = editor?.getText().trim() || "";
+
+    if (!plainText) {
       setError("Discussion description is required.");
+
+      return;
+    }
+
+    if (plainText.length > 5000) {
+      setError("Discussion description cannot exceed 5000 characters.");
+
       return;
     }
 
@@ -264,6 +413,7 @@ const StartDiscussion: React.FC = () => {
 
       if (!token) {
         setError("You are not logged in. Please login first.");
+
         return;
       }
 
@@ -275,7 +425,10 @@ const StartDiscussion: React.FC = () => {
 
       formData.append("title", title.trim());
 
-      formData.append("description", description.trim());
+      // Save TipTap HTML
+      const editorHtml = editor?.getHTML() || "";
+
+      formData.append("description", editorHtml);
 
       formData.append("categoryId", categoryId);
 
@@ -285,6 +438,14 @@ const StartDiscussion: React.FC = () => {
 
       if (image) {
         formData.append("image", image);
+      }
+
+      // ========================================
+      // REMOVE OLD IMAGE
+      // ========================================
+
+      if (removeExistingImage) {
+        formData.append("removeImage", "true");
       }
 
       // ========================================
@@ -301,9 +462,13 @@ const StartDiscussion: React.FC = () => {
 
       console.log("Category ID:", categoryId);
 
-      console.log("Description:", description.trim());
+      console.log("Description HTML:", editorHtml);
+
+      console.log("Description text:", plainText);
 
       console.log("New Image:", image);
+
+      console.log("Remove Existing Image:", removeExistingImage);
 
       console.log("================================");
 
@@ -313,7 +478,7 @@ const StartDiscussion: React.FC = () => {
 
       if (isEditMode && id) {
         const response = await axios.put(
-          `https://www.vaadsamvaad.com/api/discussions/${id}`,
+          `${API_URL}/discussions/${id}`,
           formData,
           {
             headers: {
@@ -326,10 +491,6 @@ const StartDiscussion: React.FC = () => {
 
         setSuccess("Discussion updated successfully!");
 
-        // ======================================
-        // REDIRECT
-        // ======================================
-
         setTimeout(() => {
           navigate(`/discussion/${id}`);
         }, 800);
@@ -341,22 +502,18 @@ const StartDiscussion: React.FC = () => {
       // CREATE DISCUSSION
       // ========================================
 
-      const response = await axios.post(
-        "https://www.vaadsamvaad.com/api/discussions",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const response = await axios.post(`${API_URL}/discussions`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
 
       console.log("Create discussion response:", response.data);
 
       setSuccess("Discussion started successfully!");
 
       // ========================================
-      // GET CREATED DISCUSSION ID
+      // CREATED DISCUSSION ID
       // ========================================
 
       const discussionId = response.data?.data?._id;
@@ -408,7 +565,7 @@ const StartDiscussion: React.FC = () => {
   };
 
   // ==========================================
-  // PAGE LOADING FOR EDIT
+  // PAGE LOADING
   // ==========================================
 
   if (pageLoading) {
@@ -440,6 +597,7 @@ const StartDiscussion: React.FC = () => {
           href="#"
           onClick={(e) => {
             e.preventDefault();
+
             navigate("/");
           }}
         >
@@ -452,6 +610,7 @@ const StartDiscussion: React.FC = () => {
           href="#"
           onClick={(e) => {
             e.preventDefault();
+
             navigate("/discussion");
           }}
         >
@@ -466,7 +625,7 @@ const StartDiscussion: React.FC = () => {
       </div>
 
       {/* ======================================
-          PAGE TITLE
+          TITLE
       ====================================== */}
 
       <h1 className="page-title mb-1">
@@ -479,15 +638,11 @@ const StartDiscussion: React.FC = () => {
           : "Share your thoughts and start a meaningful conversation."}
       </p>
 
-      {/* ======================================
-          ERROR
-      ====================================== */}
+      {/* ERROR */}
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {/* ======================================
-          SUCCESS
-      ====================================== */}
+      {/* SUCCESS */}
 
       {success && <div className="alert alert-success">{success}</div>}
 
@@ -554,56 +709,122 @@ const StartDiscussion: React.FC = () => {
         ==================================== */}
 
         <div className="mb-4">
-          <label className="field-label" htmlFor="description">
-            Description
-          </label>
+          <label className="field-label">Description</label>
 
           <div className="editor-wrap">
-            {/* TOOLBAR */}
+            {/* ================================
+                TOOLBAR
+            ================================ */}
 
             <div className="editor-toolbar">
-              <button type="button" className="editor-tool" title="Bold">
+              {/* BOLD */}
+
+              <button
+                type="button"
+                className={`editor-tool ${
+                  editor?.isActive("bold") ? "active" : ""
+                }`}
+                title="Bold"
+                onClick={() => editor?.chain().focus().toggleBold().run()}
+              >
                 <i className="bi bi-type-bold"></i>
               </button>
 
-              <button type="button" className="editor-tool" title="Italic">
+              {/* ITALIC */}
+
+              <button
+                type="button"
+                className={`editor-tool ${
+                  editor?.isActive("italic") ? "active" : ""
+                }`}
+                title="Italic"
+                onClick={() => editor?.chain().focus().toggleItalic().run()}
+              >
                 <i className="bi bi-type-italic"></i>
               </button>
 
-              <button type="button" className="editor-tool" title="Bullet list">
+              {/* BULLET LIST */}
+
+              <button
+                type="button"
+                className={`editor-tool ${
+                  editor?.isActive("bulletList") ? "active" : ""
+                }`}
+                title="Bullet List"
+                onClick={() => editor?.chain().focus().toggleBulletList().run()}
+              >
                 <i className="bi bi-list-ul"></i>
               </button>
 
-              <button type="button" className="editor-tool" title="Quote">
+              {/* QUOTE */}
+
+              <button
+                type="button"
+                className={`editor-tool ${
+                  editor?.isActive("blockquote") ? "active" : ""
+                }`}
+                title="Quote"
+                onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+              >
                 <i className="bi bi-quote"></i>
               </button>
 
-              <button type="button" className="editor-tool" title="Link">
+              {/* LINK */}
+
+              <button
+                type="button"
+                className={`editor-tool ${
+                  editor?.isActive("link") ? "active" : ""
+                }`}
+                title="Add Link"
+                onClick={handleSetLink}
+              >
                 <i className="bi bi-link-45deg"></i>
               </button>
 
-              <button type="button" className="editor-tool" title="Emoji">
+              {/* REMOVE LINK */}
+
+              {editor?.isActive("link") && (
+                <button
+                  type="button"
+                  className="editor-tool"
+                  title="Remove Link"
+                  onClick={handleRemoveLink}
+                >
+                  <i className="bi bi-link-45deg"></i>
+                  <span
+                    style={{
+                      fontSize: "10px",
+                    }}
+                  >
+                    ×
+                  </span>
+                </button>
+              )}
+
+              {/* EMOJI */}
+
+              <button
+                type="button"
+                className="editor-tool"
+                title="Emoji"
+                onClick={handleEmoji}
+              >
                 <i className="bi bi-emoji-smile"></i>
               </button>
             </div>
 
-            {/* EDITOR */}
+            {/* ================================
+                EDITOR
+            ================================ */}
 
             <div className="editor-body">
-              <textarea
-                id="description"
-                className="form-control"
-                placeholder="Write your thoughts in detail..."
-                maxLength={5000}
-                rows={8}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
+              <EditorContent editor={editor} />
             </div>
           </div>
 
           <div className="char-count">
-            <span>{description.length}</span>
+            <span>{descriptionLength}</span>
             /5000
           </div>
         </div>
@@ -632,7 +853,7 @@ const StartDiscussion: React.FC = () => {
                 }}
               >
                 <img
-                  src={`https://www.vaadsamvaad.com${existingImage}`}
+                  src={`${SERVER_URL}${existingImage}`}
                   alt="Current discussion"
                   style={{
                     width: "200px",
@@ -654,7 +875,7 @@ const StartDiscussion: React.FC = () => {
             </div>
           )}
 
-          {/* UPLOAD BOX */}
+          {/* UPLOAD */}
 
           <label
             htmlFor="fileInput"
@@ -706,7 +927,7 @@ const StartDiscussion: React.FC = () => {
         </div>
 
         {/* ====================================
-            ACTIONS
+            ACTION BUTTONS
         ==================================== */}
 
         <div className="d-flex justify-content-end gap-2 action-row">

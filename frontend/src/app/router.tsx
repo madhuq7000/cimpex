@@ -18,32 +18,80 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
+        {/* ======================================
+            LOGIN / REGISTER
+        ====================================== */}
+
         <Route path="/login" element={<Login />} />
+
         <Route path="/register" element={<Register />} />
 
-        {/* Protected Routes */}
-        <Route
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/dashboard" element={<Dashboard />} />
+        {/* ======================================
+            MAIN LAYOUT
+            PUBLIC
+        ====================================== */}
 
-          <Route path="/add-category" element={<AddCategory />} />
+        <Route element={<MainLayout />}>
+          {/* ====================================
+              PUBLIC ROUTES
+          ==================================== */}
+
           <Route path="/discussion" element={<Discussion />} />
+
           <Route path="/discussion/:id" element={<DiscussionDetails />} />
-          <Route path="/start-discussion" element={<StartDiscussion />} />
-          <Route path="/discussion/edit/:id" element={<StartDiscussion />} />
+
+          {/* ====================================
+              PROTECTED ROUTES
+          ==================================== */}
+
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/add-category"
+            element={
+              <ProtectedRoute>
+                <AddCategory />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/start-discussion"
+            element={
+              <ProtectedRoute>
+                <StartDiscussion />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/discussion/edit/:id"
+            element={
+              <ProtectedRoute>
+                <StartDiscussion />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
-        {/* Default Route */}
-        <Route path="/" element={<Login />} />
+        {/* ======================================
+            DEFAULT
+        ====================================== */}
 
-        {/* Fallback */}
-        <Route path="*" element={<Login />} />
+        <Route path="/" element={<Discussion />} />
+
+        {/* ======================================
+            FALLBACK
+        ====================================== */}
+
+        <Route path="*" element={<Discussion />} />
       </Routes>
     </BrowserRouter>
   );

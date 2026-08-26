@@ -51,12 +51,20 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
-    padding:10px;
-    background:blue;
-    border-radius:8px;
+    padding:5px 10px;
+    background:var(--purple);
+    border-radius:6px;
     transition:.3s;
     color:#fff;
 }
 .fa-trash{
     margin-left:10px;
+}
+
+.listItem i{
+  color:#fff !important;
+  margin-left:10px;
+}
+.listItem button{
+  margin-left:0px;
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import DOMPurify from "dompurify";
 
 interface Category {
   _id: string;
@@ -49,7 +50,7 @@ const Discussion: React.FC = () => {
         setError("");
 
         const response = await axios.get(
-          "https://www.vaadsamvaad.com/api/discussions",
+          "http://localhost:3000/api/discussions",
         );
 
         console.log("Discussion API response:", response.data);
@@ -77,7 +78,7 @@ const Discussion: React.FC = () => {
         setCategoryError("");
 
         const response = await axios.get(
-          "https://www.vaadsamvaad.com/api/categories",
+          "http://localhost:3000/api/categories",
         );
 
         console.log("Category API response:", response.data);
@@ -223,7 +224,7 @@ const Discussion: React.FC = () => {
                       <div className="thumb">
                         {discussion.image ? (
                           <img
-                            src={`https://www.vaadsamvaad.com${discussion.image}`}
+                            src={`http://localhost:3000${discussion.image}`}
                             alt={discussion.title}
                           />
                         ) : (
@@ -241,7 +242,17 @@ const Discussion: React.FC = () => {
                       <h2 className="card-title mb-1">{discussion.title}</h2>
 
                       {/* Description */}
-                      <p className="card-desc mb-2">{discussion.description}</p>
+
+                      <div
+                        className="card-desc mb-2"
+                        style={{
+                          color: "#374151",
+                          fontSize: ".95rem",
+                        }}
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(discussion.description),
+                        }}
+                      />
 
                       {/* Author / Category / Time */}
                       <div className="d-flex align-items-center gap-2 flex-wrap mb-2 profileImage">

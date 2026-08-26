@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 
 // Upload folder
-const uploadPath = path.join(__dirname, "/var/www/vaadsamvaad/uploads/discussions");
+const uploadPath = path.join(__dirname, "/uploads/discussions/${req.file.filename}");
 
 
 // Create folder if it does not exist

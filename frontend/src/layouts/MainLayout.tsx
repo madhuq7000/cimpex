@@ -539,10 +539,10 @@ const MainLayout: FC = () => {
       {/* ================= FEATURES ================= */}
 
       <section className="features-section">
-        <h2>Why Join VaadSamvaad?</h2>
+        <h2 className="features-title">Why Join VaadSamvaad?</h2>
 
         <div className="container">
-          <div className="row g-4">
+          <div className="row g-4 text-center">
             <div className="col-6 col-md-3">
               <div className="feature-item">
                 <div className="feature-icon purple">

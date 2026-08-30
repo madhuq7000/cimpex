@@ -69,7 +69,7 @@ interface LoggedInUser {
 // SERVER
 // ==========================================
 
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://www.vaadsamvaad.com";
 const API_URL = `${SERVER_URL}/api`;
 
 const DiscussionDetails: React.FC = () => {
@@ -250,13 +250,11 @@ const DiscussionDetails: React.FC = () => {
       // ========================================
 
       const response = await axios.post(
-        `${API_URL}/comments/discussion/${id}`,
-        {
-          comment: commentText.trim(),
-        },
+        `/api/comments/discussion/${id}`,
+        { comment: commentText },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         },
       );

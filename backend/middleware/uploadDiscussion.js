@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 
 // Upload folder
-const uploadPath = path.join(__dirname, "/uploads/discussions/${req.file.filename}");
+const uploadPath = path.join(__dirname, "..", "uploads", "discussions");
 
 
 // Create folder if it does not exist
@@ -12,6 +12,8 @@ if (!fs.existsSync(uploadPath)) {
     recursive: true,
   });
 }
+
+
 
 // Configure storage
 const storage = multer.diskStorage({
@@ -27,6 +29,7 @@ const storage = multer.diskStorage({
     cb(null, `${uniqueName}${extension}`);
   },
 });
+
 
 // Allow only images
 const fileFilter = (req, file, cb) => {

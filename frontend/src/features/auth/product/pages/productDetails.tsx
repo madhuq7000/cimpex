@@ -47,7 +47,7 @@ export default function ProductDetails() {
         {/* LARGE IMAGE */}
         <div className="bigImage mb-3">
           <img
-            src={`http://localhost:3000/uploads/${selectedImage}`}
+            src={`https://www.vaadsamvaad.com/uploads/${selectedImage}`}
             alt={product.name}
             className="img-fluid rounded"
           />
@@ -71,7 +71,7 @@ export default function ProductDetails() {
               }}
             >
               <img
-                src={`http://localhost:3000/uploads/${img}`}
+                src={`https://www.vaadsamvaad.com/uploads/${img}`}
                 alt={`thumb-${index}`}
                 className="w-100 h-100"
                 style={{

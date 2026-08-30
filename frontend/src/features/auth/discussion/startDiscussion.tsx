@@ -22,7 +22,7 @@ interface Discussion {
   image?: string;
 }
 
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://www.vaadsamvaad.com";
 const API_URL = `${SERVER_URL}/api`;
 
 const StartDiscussion: React.FC = () => {
@@ -42,7 +42,7 @@ const StartDiscussion: React.FC = () => {
 
   const [title, setTitle] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
+  const [, setDescription] = useState<string>("");
 
   const [image, setImage] = useState<File | null>(null);
 

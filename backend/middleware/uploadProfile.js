@@ -5,7 +5,8 @@ const path = require("path");
 const fs = require("fs");
 
 // ==========================================
-// PROFILE UPLOAD FOLDER
+// PROFILE UPLOAD DIRECTORY
+// backend/uploads/profiles/
 // ==========================================
 
 const uploadPath = path.join(
@@ -15,15 +16,23 @@ const uploadPath = path.join(
   "profiles",
 );
 
-// Create folder if it does not exist
+// ==========================================
+// CREATE PROFILE DIRECTORY
+// ==========================================
+
 if (!fs.existsSync(uploadPath)) {
   fs.mkdirSync(uploadPath, {
     recursive: true,
   });
+
+  console.log(
+    "Profile upload directory created:",
+    uploadPath,
+  );
 }
 
 // ==========================================
-// STORAGE
+// STORAGE CONFIGURATION
 // ==========================================
 
 const storage = multer.diskStorage({
@@ -42,36 +51,40 @@ const storage = multer.diskStorage({
 
     cb(
       null,
-      `${uniqueName}${extension}`,
+      `profile-${uniqueName}${extension}`,
     );
   },
 });
 
 // ==========================================
-// ALLOW ONLY IMAGES
+// ALLOWED IMAGE TYPES
+// ==========================================
+
+const allowedMimeTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+// ==========================================
+// FILE FILTER
 // ==========================================
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-  ];
-
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(
-      new Error(
-        "Only JPG, PNG and WEBP image files are allowed",
-      ),
-      false,
-    );
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    return cb(null, true);
   }
+
+  return cb(
+    new Error(
+      "Only JPG, JPEG, PNG and WEBP images are allowed",
+    ),
+    false,
+  );
 };
 
 // ==========================================
-// CONFIGURE MULTER
+// MULTER CONFIGURATION
 // ==========================================
 
 const uploadProfile = multer({
@@ -80,7 +93,11 @@ const uploadProfile = multer({
   fileFilter,
 
   limits: {
+    // Maximum profile image size: 5 MB
     fileSize: 5 * 1024 * 1024,
+
+    // Only one profile image
+    files: 1,
   },
 });
 

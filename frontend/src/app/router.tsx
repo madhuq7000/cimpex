@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import MainLayout from "../layouts/MainLayout";
 
@@ -19,6 +19,13 @@ export default function AppRouter() {
     <BrowserRouter>
       <Routes>
         {/* ======================================
+            DEFAULT ROUTE
+            / -> /discussion
+        ====================================== */}
+
+        <Route path="/" element={<Navigate to="/discussion" replace />} />
+
+        {/* ======================================
             LOGIN / REGISTER
         ====================================== */}
 
@@ -28,7 +35,6 @@ export default function AppRouter() {
 
         {/* ======================================
             MAIN LAYOUT
-            PUBLIC
         ====================================== */}
 
         <Route element={<MainLayout />}>
@@ -82,16 +88,11 @@ export default function AppRouter() {
         </Route>
 
         {/* ======================================
-            DEFAULT
-        ====================================== */}
-
-        <Route path="/" element={<Discussion />} />
-
-        {/* ======================================
             FALLBACK
+            INVALID URL -> /discussion
         ====================================== */}
 
-        <Route path="*" element={<Discussion />} />
+        <Route path="*" element={<Navigate to="/discussion" replace />} />
       </Routes>
     </BrowserRouter>
   );

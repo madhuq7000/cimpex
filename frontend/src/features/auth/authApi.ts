@@ -1,15 +1,30 @@
 // features/auth/authApi.ts
+
 import api from "../../core/api/axios";
+
 import type {
   LoginPayload,
-  RegisterPayload,
   AuthResponse,
 } from "./types";
 
+// ==========================================
+// LOGIN
+// ==========================================
+
 export const loginApi = (data: LoginPayload) => {
-  return api.post<AuthResponse>("/auth/login", data);
+  return api.post<AuthResponse>(
+    "/auth/login",
+    data,
+  );
 };
 
-export const registerApi = (data: RegisterPayload) => {
-  return api.post("/auth/register", data);
+// ==========================================
+// REGISTER
+// ==========================================
+
+export const registerApi = (data: FormData) => {
+  return api.post<AuthResponse>(
+    "/auth/register",
+    data,
+  );
 };

@@ -21,6 +21,7 @@ interface LoggedInUser {
   name?: string;
   email?: string;
   role?: string;
+  profileImage?: string;
 }
 
 const MainLayout: FC = () => {
@@ -47,6 +48,59 @@ const MainLayout: FC = () => {
   }
 
   // ==========================================
+  // SERVER URL
+  // ==========================================
+
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+
+  // ==========================================
+  // PROFILE IMAGE URL
+  // ==========================================
+
+  const getProfileImageUrl = () => {
+    const profileImage = loggedInUser?.profileImage;
+
+    if (!profileImage) {
+      return `${SERVER_URL}/uploads/profiles/default-profile.png`;
+    }
+
+    // Complete URL already returned by backend
+    if (
+      profileImage.startsWith("http://") ||
+      profileImage.startsWith("https://")
+    ) {
+      return profileImage;
+    }
+
+    // Backend returned:
+    // /uploads/profiles/image.jpg
+    if (profileImage.startsWith("/uploads/")) {
+      return `${SERVER_URL}${profileImage}`;
+    }
+
+    // Backend returned only:
+    // image.jpg
+    return `${SERVER_URL}/uploads/profiles/${profileImage}`;
+  };
+
+  const profileImageUrl = getProfileImageUrl();
+
+  // ==========================================
+  // PROFILE IMAGE ERROR
+  // ==========================================
+
+  const handleProfileImageError = (
+    e: React.SyntheticEvent<HTMLImageElement>,
+  ) => {
+    const defaultImage = `${SERVER_URL}/uploads/profiles/default-profile.png`;
+
+    // Prevent infinite error loop
+    if (e.currentTarget.src !== defaultImage) {
+      e.currentTarget.src = defaultImage;
+    }
+  };
+
+  // ==========================================
   // STATES
   // ==========================================
 
@@ -63,7 +117,7 @@ const MainLayout: FC = () => {
   const handleLogout = () => {
     logout();
 
-    navigate("/login", {
+    navigate("/discussion", {
       replace: true,
     });
   };
@@ -146,8 +200,9 @@ const MainLayout: FC = () => {
               >
                 <span className="user-chip d-flex align-items-center gap-2">
                   <img
-                    src="https://i.pravatar.cc/72?img=13"
+                    src={profileImageUrl}
                     alt={loggedInUser?.name || "User"}
+                    onError={handleProfileImageError}
                   />
 
                   <span>{loggedInUser?.name || "User"}</span>
@@ -224,48 +279,72 @@ const MainLayout: FC = () => {
           <aside className="col-lg-3 col-xl-2 px-0 sidebar-col">
             <div className="sidebar">
               <nav className="nav flex-column mb-3">
-                {/* PUBLIC */}
+                {/* ================= PUBLIC ================= */}
 
                 <Link to="/discussion" className="nav-link-custom">
                   <i className="bi bi-search"></i>
                   Browse Discussions
                 </Link>
 
-                {/* LOGGED-IN ONLY */}
+                {/* ================= CATEGORY ================= */}
 
-                {isAuthenticated && (
-                  <>
-                    <Link to="/add-category" className="nav-link-custom">
-                      <i className="bi bi-plus-circle-fill"></i>
-                      Add Category
-                    </Link>
+                <Link
+                  to={isAuthenticated ? "/add-category" : "/login"}
+                  className="nav-link-custom"
+                >
+                  <i className="bi bi-plus-circle-fill"></i>
+                  Add Category
+                </Link>
 
-                    <Link to="/my-discussions" className="nav-link-custom">
-                      <i className="bi bi-pencil-square"></i>
-                      My Discussions
-                    </Link>
+                {/* ================= MY DISCUSSIONS ================= */}
 
-                    <Link to="/bookmarks" className="nav-link-custom">
-                      <i className="bi bi-bookmark-fill"></i>
-                      Bookmarks
-                    </Link>
+                <Link
+                  to={isAuthenticated ? "/my-discussions" : "/login"}
+                  className="nav-link-custom"
+                >
+                  <i className="bi bi-pencil-square"></i>
+                  My Discussions
+                </Link>
 
-                    <Link to="/notifications" className="nav-link-custom">
-                      <i className="bi bi-bell-fill"></i>
-                      Notifications
-                    </Link>
+                {/* ================= BOOKMARKS ================= */}
 
-                    <Link to="/profile" className="nav-link-custom">
-                      <i className="bi bi-person-fill"></i>
-                      Profile
-                    </Link>
+                <Link
+                  to={isAuthenticated ? "/bookmarks" : "/login"}
+                  className="nav-link-custom"
+                >
+                  <i className="bi bi-bookmark-fill"></i>
+                  Bookmarks
+                </Link>
 
-                    <Link to="/settings" className="nav-link-custom">
-                      <i className="bi bi-gear-fill"></i>
-                      Settings
-                    </Link>
-                  </>
-                )}
+                {/* ================= NOTIFICATIONS ================= */}
+
+                <Link
+                  to={isAuthenticated ? "/notifications" : "/login"}
+                  className="nav-link-custom"
+                >
+                  <i className="bi bi-bell-fill"></i>
+                  Notifications
+                </Link>
+
+                {/* ================= PROFILE ================= */}
+
+                <Link
+                  to={isAuthenticated ? "/profile" : "/login"}
+                  className="nav-link-custom"
+                >
+                  <i className="bi bi-person-fill"></i>
+                  Profile
+                </Link>
+
+                {/* ================= SETTINGS ================= */}
+
+                <Link
+                  to={isAuthenticated ? "/settings" : "/login"}
+                  className="nav-link-custom"
+                >
+                  <i className="bi bi-gear-fill"></i>
+                  Settings
+                </Link>
               </nav>
 
               {/* ================= START DISCUSSION ================= */}
@@ -301,8 +380,9 @@ const MainLayout: FC = () => {
               {isAuthenticated ? (
                 <div className="mt-auto sidebar-profile">
                   <img
-                    src="https://i.pravatar.cc/72?img=13"
+                    src={profileImageUrl}
                     alt={loggedInUser?.name || "User"}
+                    onError={handleProfileImageError}
                   />
 
                   <div>
@@ -370,7 +450,7 @@ const MainLayout: FC = () => {
                 }}
               >
                 <nav className="nav flex-column mb-3">
-                  {/* PUBLIC */}
+                  {/* ================= PUBLIC ================= */}
 
                   <Link
                     to="/discussion"
@@ -381,65 +461,71 @@ const MainLayout: FC = () => {
                     Browse Discussions
                   </Link>
 
-                  {/* LOGGED-IN ONLY */}
+                  {/* ================= CATEGORY ================= */}
 
-                  {isAuthenticated && (
-                    <>
-                      <Link
-                        to="/add-category"
-                        className="nav-link-custom"
-                        data-bs-dismiss="offcanvas"
-                      >
-                        <i className="bi bi-plus-circle-fill"></i>
-                        Add Category
-                      </Link>
+                  <Link
+                    to={isAuthenticated ? "/add-category" : "/login"}
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-plus-circle-fill"></i>
+                    Add Category
+                  </Link>
 
-                      <Link
-                        to="/my-discussions"
-                        className="nav-link-custom"
-                        data-bs-dismiss="offcanvas"
-                      >
-                        <i className="bi bi-pencil-square"></i>
-                        My Discussions
-                      </Link>
+                  {/* ================= MY DISCUSSIONS ================= */}
 
-                      <Link
-                        to="/bookmarks"
-                        className="nav-link-custom"
-                        data-bs-dismiss="offcanvas"
-                      >
-                        <i className="bi bi-bookmark-fill"></i>
-                        Bookmarks
-                      </Link>
+                  <Link
+                    to={isAuthenticated ? "/my-discussions" : "/login"}
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-pencil-square"></i>
+                    My Discussions
+                  </Link>
 
-                      <Link
-                        to="/notifications"
-                        className="nav-link-custom"
-                        data-bs-dismiss="offcanvas"
-                      >
-                        <i className="bi bi-bell-fill"></i>
-                        Notifications
-                      </Link>
+                  {/* ================= BOOKMARKS ================= */}
 
-                      <Link
-                        to="/profile"
-                        className="nav-link-custom"
-                        data-bs-dismiss="offcanvas"
-                      >
-                        <i className="bi bi-person-fill"></i>
-                        Profile
-                      </Link>
+                  <Link
+                    to={isAuthenticated ? "/bookmarks" : "/login"}
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-bookmark-fill"></i>
+                    Bookmarks
+                  </Link>
 
-                      <Link
-                        to="/settings"
-                        className="nav-link-custom"
-                        data-bs-dismiss="offcanvas"
-                      >
-                        <i className="bi bi-gear-fill"></i>
-                        Settings
-                      </Link>
-                    </>
-                  )}
+                  {/* ================= NOTIFICATIONS ================= */}
+
+                  <Link
+                    to={isAuthenticated ? "/notifications" : "/login"}
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-bell-fill"></i>
+                    Notifications
+                  </Link>
+
+                  {/* ================= PROFILE ================= */}
+
+                  <Link
+                    to={isAuthenticated ? "/profile" : "/login"}
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-person-fill"></i>
+                    Profile
+                  </Link>
+
+                  {/* ================= SETTINGS ================= */}
+
+                  <Link
+                    to={isAuthenticated ? "/settings" : "/login"}
+                    className="nav-link-custom"
+                    data-bs-dismiss="offcanvas"
+                  >
+                    <i className="bi bi-gear-fill"></i>
+                    Settings
+                  </Link>
                 </nav>
 
                 {/* ================= START DISCUSSION ================= */}
@@ -477,8 +563,9 @@ const MainLayout: FC = () => {
                 {isAuthenticated ? (
                   <div className="sidebar-profile">
                     <img
-                      src="https://i.pravatar.cc/72?img=13"
+                      src={profileImageUrl}
                       alt={loggedInUser?.name || "User"}
+                      onError={handleProfileImageError}
                     />
 
                     <div>
@@ -505,6 +592,7 @@ const MainLayout: FC = () => {
                         className="btn btn-outline-primary"
                         data-bs-dismiss="offcanvas"
                       >
+                        <i className="bi bi-box-arrow-in-right me-2"></i>
                         Login
                       </Link>
 
@@ -513,6 +601,7 @@ const MainLayout: FC = () => {
                         className="btn btn-primary"
                         data-bs-dismiss="offcanvas"
                       >
+                        <i className="bi bi-person-plus me-2"></i>
                         Register
                       </Link>
                     </div>
@@ -585,7 +674,7 @@ const MainLayout: FC = () => {
                   <i className="bi bi-shield-fill-check"></i>
                 </div>
 
-                <h5>Safe & Respectful</h5>
+                <h5>Safe &amp; Respectful</h5>
 
                 <p>A positive environment for healthy discussions.</p>
               </div>

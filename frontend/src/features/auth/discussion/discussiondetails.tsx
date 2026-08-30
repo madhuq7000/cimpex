@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import axios from "axios";
@@ -24,6 +25,7 @@ interface Discussion {
     _id: string;
     name?: string;
     email?: string;
+    profileImage?: string;
   };
 
   image?: string;
@@ -45,6 +47,7 @@ interface Comment {
     _id: string;
     name?: string;
     email?: string;
+    profileImage?: string;
   };
 
   status?: string;
@@ -63,17 +66,51 @@ interface LoggedInUser {
   name?: string;
   email?: string;
   role?: string;
+  profileImage?: string;
 }
 
 // ==========================================
 // SERVER
 // ==========================================
 
-const SERVER_URL = "https://www.vaadsamvaad.com";
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+
 const API_URL = `${SERVER_URL}/api`;
 
+// ==========================================
+// PROFILE IMAGE HELPER
+// ==========================================
+
+const getProfileImageUrl = (profileImage?: string) => {
+  if (!profileImage) {
+    return `${SERVER_URL}/uploads/profiles/default-profile.png`;
+  }
+
+  // Complete URL
+  if (
+    profileImage.startsWith("http://") ||
+    profileImage.startsWith("https://")
+  ) {
+    return profileImage;
+  }
+
+  // Already contains /uploads/
+  if (profileImage.startsWith("/uploads/")) {
+    return `${SERVER_URL}${profileImage}`;
+  }
+
+  // Filename only
+  return `${SERVER_URL}/uploads/profiles/${profileImage}`;
+};
+
+// ==========================================
+// DISCUSSION DETAILS
+// ==========================================
+
 const DiscussionDetails: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{
+    id: string;
+  }>();
 
   const navigate = useNavigate();
 
@@ -96,6 +133,26 @@ const DiscussionDetails: React.FC = () => {
   } catch (error) {
     console.error("Invalid user data in localStorage:", error);
   }
+
+  // ==========================================
+  // LOGGED IN USER IMAGE
+  // ==========================================
+
+  const loggedInUserImage = getProfileImageUrl(loggedInUser?.profileImage);
+
+  // ==========================================
+  // IMAGE ERROR FALLBACK
+  // ==========================================
+
+  const handleProfileImageError = (
+    e: React.SyntheticEvent<HTMLImageElement>,
+  ) => {
+    const defaultImage = `${SERVER_URL}/uploads/profiles/default-profile.png`;
+
+    if (e.currentTarget.src !== defaultImage) {
+      e.currentTarget.src = defaultImage;
+    }
+  };
 
   // ==========================================
   // DISCUSSION STATE
@@ -250,11 +307,13 @@ const DiscussionDetails: React.FC = () => {
       // ========================================
 
       const response = await axios.post(
-        `/api/comments/discussion/${id}`,
-        { comment: commentText },
+        `${API_URL}/comments/discussion/${id}`,
+        {
+          comment: commentText,
+        },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${token}`,
           },
         },
       );
@@ -277,7 +336,6 @@ const DiscussionDetails: React.FC = () => {
 
       console.error("COMMENT ERROR RESPONSE:", error.response?.data);
 
-      // Invalid / expired token
       if (error.response?.status === 401) {
         setCommentError("Your session has expired. Please login again.");
 
@@ -402,6 +460,14 @@ const DiscussionDetails: React.FC = () => {
     discussion.createdBy?.name || discussion.createdBy?.email || "Unknown";
 
   // ==========================================
+  // AUTHOR PROFILE IMAGE
+  // ==========================================
+
+  const authorProfileImage = getProfileImageUrl(
+    discussion.createdBy?.profileImage,
+  );
+
+  // ==========================================
   // DISCUSSION DATE
   // ==========================================
 
@@ -429,7 +495,7 @@ const DiscussionDetails: React.FC = () => {
           onClick={(e) => {
             e.preventDefault();
 
-            navigate("/");
+            navigate("/discussion");
           }}
         >
           Home
@@ -466,7 +532,6 @@ const DiscussionDetails: React.FC = () => {
 
         {/* ====================================
             EDIT
-            Only show when logged in
         ==================================== */}
 
         {isAuthenticated && (
@@ -497,9 +562,10 @@ const DiscussionDetails: React.FC = () => {
 
           <div className="d-flex align-items-center gap-2">
             <img
-              src="https://i.pravatar.cc/80?img=13"
+              src={authorProfileImage}
               className="avatar-sm avatar"
               alt={authorName}
+              onError={handleProfileImageError}
             />
 
             <span className="fw-semibold small">{authorName}</span>
@@ -533,10 +599,6 @@ const DiscussionDetails: React.FC = () => {
           {/* STATS */}
 
           <div className="d-flex gap-3">
-            <span className="stat-pill">
-              <i className="bi bi-eye"></i> 0 Views
-            </span>
-
             <span className="stat-pill">
               <i className="bi bi-chat"></i> {comments.length} Comments
             </span>
@@ -637,15 +699,24 @@ const DiscussionDetails: React.FC = () => {
             const commentUserName =
               comment.createdBy?.name || comment.createdBy?.email || "User";
 
+            // ==================================
+            // COMMENT USER PROFILE IMAGE
+            // ==================================
+
+            const commentProfileImage = getProfileImageUrl(
+              comment.createdBy?.profileImage,
+            );
+
             return (
               <div className="comment-thread mb-3" key={comment._id}>
                 {/* COMMENT AUTHOR */}
 
                 <div className="d-flex align-items-center gap-2 mb-2">
                   <img
-                    src="https://i.pravatar.cc/80?img=13"
+                    src={commentProfileImage}
                     className="avatar-sm avatar"
                     alt={commentUserName}
+                    onError={handleProfileImageError}
                   />
 
                   <div>
@@ -672,15 +743,12 @@ const DiscussionDetails: React.FC = () => {
         ====================================== */}
 
         {isAuthenticated ? (
-          // ====================================
-          // LOGGED IN
-          // ====================================
-
           <div className="composer-row d-flex align-items-center gap-2 mt-4">
             <img
-              src="https://i.pravatar.cc/80?img=13"
+              src={loggedInUserImage}
               className="avatar"
               alt={loggedInUser?.name || "Current User"}
+              onError={handleProfileImageError}
             />
 
             <input
@@ -709,10 +777,6 @@ const DiscussionDetails: React.FC = () => {
             </button>
           </div>
         ) : (
-          // ====================================
-          // NOT LOGGED IN
-          // ====================================
-
           <div className="alert alert-light border mt-4 text-center">
             <i className="bi bi-lock-fill me-2"></i>
             Please{" "}

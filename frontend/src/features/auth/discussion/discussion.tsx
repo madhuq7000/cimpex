@@ -290,19 +290,9 @@ const Discussion: React.FC = () => {
 
                       {/* Footer */}
                       <div className="card-footer-custom">
-                        {/* Views */}
-                        <span className="stat">
-                          <i className="bi bi-eye"></i>0 Views
-                        </span>
-
-                        {/* Opinions */}
-                        <span className="stat">
-                          <i className="bi bi-lightbulb"></i>0 Opinions
-                        </span>
-
                         {/* Comments */}
                         <span className="stat">
-                          <i className="bi bi-chat-square-text"></i>0 Comments
+                          <i className="bi bi-chat-square-text"></i>
                         </span>
 
                         {/* Bookmark */}

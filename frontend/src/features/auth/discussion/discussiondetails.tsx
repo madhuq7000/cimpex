@@ -73,7 +73,8 @@ interface LoggedInUser {
 // SERVER
 // ==========================================
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+const SERVER_URL =
+  import.meta.env.VITE_SERVER_URL || "https://www.vaadsamvaad.com";
 
 const API_URL = `${SERVER_URL}/api`;
 
@@ -81,12 +82,11 @@ const API_URL = `${SERVER_URL}/api`;
 // PROFILE IMAGE HELPER
 // ==========================================
 
-const getProfileImageUrl = (profileImage?: string) => {
-  if (!profileImage) {
+const getProfileImageUrl = (profileImage?: string | null) => {
+  if (!profileImage || profileImage === "default-profile.png") {
     return `${SERVER_URL}/uploads/profiles/default-profile.png`;
   }
 
-  // Complete URL
   if (
     profileImage.startsWith("http://") ||
     profileImage.startsWith("https://")
@@ -94,12 +94,10 @@ const getProfileImageUrl = (profileImage?: string) => {
     return profileImage;
   }
 
-  // Already contains /uploads/
   if (profileImage.startsWith("/uploads/")) {
     return `${SERVER_URL}${profileImage}`;
   }
 
-  // Filename only
   return `${SERVER_URL}/uploads/profiles/${profileImage}`;
 };
 

@@ -12,7 +12,7 @@ const uploadPath = path.join(
   __dirname,
   "..",
   "uploads",
-  "profiles",
+  "discussions",
 );
 
 // Create folder if it does not exist

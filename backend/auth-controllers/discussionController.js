@@ -44,11 +44,18 @@ const startDiscussion = async (req, res) => {
       createdBy: req.user._id,
     });
 
+    // ==========================================
+    // POPULATE CATEGORY + USER PROFILE IMAGE
+    // ==========================================
+
     const populatedDiscussion = await Discussion.findById(
-      discussion._id
+      discussion._id,
     )
       .populate("category", "name")
-      .populate("createdBy", "name email");
+      .populate(
+        "createdBy",
+        "name email profileImage",
+      );
 
     return res.status(201).json({
       success: true,
@@ -74,8 +81,13 @@ const getDiscussions = async (req, res) => {
   try {
     const discussions = await Discussion.find()
       .populate("category", "name")
-      .populate("createdBy", "name email")
-      .sort({ createdAt: -1 });
+      .populate(
+        "createdBy",
+        "name email profileImage",
+      )
+      .sort({
+        createdAt: -1,
+      });
 
     return res.status(200).json({
       success: true,
@@ -103,7 +115,10 @@ const getDiscussionById = async (req, res) => {
 
     const discussion = await Discussion.findById(id)
       .populate("category", "name")
-      .populate("createdBy", "name email");
+      .populate(
+        "createdBy",
+        "name email profileImage",
+      );
 
     if (!discussion) {
       return res.status(404).json({
@@ -146,10 +161,20 @@ const updateDiscussion = async (req, res) => {
     console.log("File:", req.file);
 
     const { id } = req.params;
-    const { title, description, categoryId, removeImage } = req.body;
 
-    // Find discussion
-    const discussion = await Discussion.findById(id);
+    const {
+      title,
+      description,
+      categoryId,
+      removeImage,
+    } = req.body;
+
+    // ==========================================
+    // FIND DISCUSSION
+    // ==========================================
+
+    const discussion =
+      await Discussion.findById(id);
 
     if (!discussion) {
       return res.status(404).json({
@@ -158,27 +183,39 @@ const updateDiscussion = async (req, res) => {
       });
     }
 
-    // Check owner
+    // ==========================================
+    // CHECK OWNER
+    // ==========================================
+
     if (
       discussion.createdBy.toString() !==
       req.user._id.toString()
     ) {
       return res.status(403).json({
         success: false,
-        message: "You are not authorized to edit this discussion",
+        message:
+          "You are not authorized to edit this discussion",
       });
     }
 
-    // Validation
+    // ==========================================
+    // VALIDATION
+    // ==========================================
+
     if (!title || !description || !categoryId) {
       return res.status(400).json({
         success: false,
-        message: "Title, description and category are required",
+        message:
+          "Title, description and category are required",
       });
     }
 
-    // Check category
-    const category = await Category.findById(categoryId);
+    // ==========================================
+    // CHECK CATEGORY
+    // ==========================================
+
+    const category =
+      await Category.findById(categoryId);
 
     if (!category) {
       return res.status(404).json({
@@ -187,35 +224,63 @@ const updateDiscussion = async (req, res) => {
       });
     }
 
-    // Update basic fields
+    // ==========================================
+    // UPDATE BASIC FIELDS
+    // ==========================================
+
     discussion.title = title.trim();
-    discussion.description = description.trim();
+    discussion.description =
+      description.trim();
     discussion.category = categoryId;
 
-    // New image
-    if (req.file) {
-      discussion.image = `/uploads/discussions/${req.file.filename}`;
+    // ==========================================
+    // UPDATE IMAGE
+    // ==========================================
 
-      console.log("New image:", discussion.image);
+    if (req.file) {
+      discussion.image =
+        `/uploads/discussions/${req.file.filename}`;
+
+      console.log(
+        "New image:",
+        discussion.image,
+      );
     } else if (removeImage === "true") {
       discussion.image = "";
 
-      console.log("Existing image removed");
+      console.log(
+        "Existing image removed",
+      );
     }
 
     await discussion.save();
 
-    const updatedDiscussion = await Discussion.findById(id)
-      .populate("category", "name")
-      .populate("createdBy", "name email");
+    // ==========================================
+    // POPULATE UPDATED DISCUSSION
+    // ==========================================
+
+    const updatedDiscussion =
+      await Discussion.findById(id)
+        .populate(
+          "category",
+          "name",
+        )
+        .populate(
+          "createdBy",
+          "name email profileImage",
+        );
 
     return res.status(200).json({
       success: true,
-      message: "Discussion updated successfully",
+      message:
+        "Discussion updated successfully",
       data: updatedDiscussion,
     });
   } catch (error) {
-    console.error("Update discussion error:", error);
+    console.error(
+      "Update discussion error:",
+      error,
+    );
 
     if (error.name === "CastError") {
       return res.status(400).json({
@@ -226,11 +291,16 @@ const updateDiscussion = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Failed to update discussion",
+      message:
+        "Failed to update discussion",
       error: error.message,
     });
   }
 };
+
+// ==========================================
+// EXPORTS
+// ==========================================
 
 module.exports = {
   startDiscussion,

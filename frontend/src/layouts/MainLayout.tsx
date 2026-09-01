@@ -51,7 +51,7 @@ const MainLayout: FC = () => {
   // SERVER URL
   // ==========================================
 
-  const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL || "https://www.vaadsamvaad.com";
 
   // ==========================================
   // PROFILE IMAGE URL

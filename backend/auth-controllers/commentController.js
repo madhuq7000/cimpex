@@ -58,9 +58,10 @@ const addComment = async (req, res) => {
     // CHECK DISCUSSION
     // ========================================
 
-    const discussion = await Discussion.findById(
-      discussionId,
-    );
+    const discussion =
+      await Discussion.findById(
+        discussionId,
+      );
 
     if (!discussion) {
       return res.status(404).json({
@@ -73,19 +74,27 @@ const addComment = async (req, res) => {
     // CREATE COMMENT
     // ========================================
 
-    const newComment = await Comment.create({
-      discussion: discussionId,
-      comment: comment.trim(),
-      createdBy: userId,
-    });
+    const newComment =
+      await Comment.create({
+        discussion: discussionId,
+        comment: comment.trim(),
+        createdBy: userId,
+      });
 
     // ========================================
-    // POPULATE USER
+    // POPULATE COMMENT USER
+    // ========================================
+    // This returns the actual profile image
+    // of the user who created the comment.
     // ========================================
 
     const populatedComment =
-      await Comment.findById(newComment._id)
-        .populate("createdBy", "name email");
+      await Comment.findById(
+        newComment._id,
+      ).populate(
+        "createdBy",
+        "name email profileImage",
+      );
 
     // ========================================
     // RESPONSE
@@ -93,15 +102,20 @@ const addComment = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Comment added successfully",
+      message:
+        "Comment added successfully",
       data: populatedComment,
     });
   } catch (error) {
-    console.error("Add comment error:", error);
+    console.error(
+      "Add comment error:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to add comment",
+      message:
+        "Failed to add comment",
       error: error.message,
     });
   }
@@ -113,32 +127,54 @@ const addComment = async (req, res) => {
 
 const getComments = async (req, res) => {
   try {
-    const { discussionId } = req.params;
+    const { discussionId } =
+      req.params;
 
     console.log(
       "Getting comments for discussion:",
       discussionId,
     );
 
-    const comments = await Comment.find({
-      discussion: discussionId,
-      status: "active",
-    })
-      .populate("createdBy", "name email")
-      .sort({
-        createdAt: -1,
-      });
+    // ========================================
+    // GET COMMENTS
+    // ========================================
+    // Populate each comment author's:
+    // name
+    // email
+    // profileImage
+    // ========================================
+
+    const comments =
+      await Comment.find({
+        discussion: discussionId,
+        status: "active",
+      })
+        .populate(
+          "createdBy",
+          "name email profileImage",
+        )
+        .sort({
+          createdAt: -1,
+        });
+
+    // ========================================
+    // RESPONSE
+    // ========================================
 
     return res.status(200).json({
       success: true,
       data: comments,
     });
   } catch (error) {
-    console.error("Get comments error:", error);
+    console.error(
+      "Get comments error:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch comments",
+      message:
+        "Failed to fetch comments",
       error: error.message,
     });
   }

@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
+import DOMPurify from "dompurify";
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import LinkExtension from "@tiptap/extension-link";
+
+import { API_URL, SERVER_URL } from "../../../core/config/env";
+import { useLanguage } from "../../../core/context/LanguageContext";
 
 interface Category {
   _id: string;
@@ -20,13 +24,12 @@ interface Discussion {
     name: string;
   };
   image?: string;
+  video?: string;
 }
-
-const SERVER_URL = "https://www.vaadsamvaad.com";
-const API_URL = `${SERVER_URL}/api`;
 
 const StartDiscussion: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   // ==========================================
   // GET DISCUSSION ID
@@ -53,6 +56,16 @@ const StartDiscussion: React.FC = () => {
   const [removeExistingImage, setRemoveExistingImage] =
     useState<boolean>(false);
 
+  const [video, setVideo] = useState<File | null>(null);
+  const [existingVideo, setExistingVideo] = useState<string>("");
+  const [removeExistingVideo, setRemoveExistingVideo] =
+    useState<boolean>(false);
+  const [videoPreview, setVideoPreview] = useState<string>("");
+
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+
+  const [importingDocument, setImportingDocument] = useState<boolean>(false);
+
   // ==========================================
   // CATEGORY STATES
   // ==========================================
@@ -72,6 +85,17 @@ const StartDiscussion: React.FC = () => {
   const [error, setError] = useState<string>("");
 
   const [success, setSuccess] = useState<string>("");
+
+  const allowedDocumentTypes = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
+
+  const allowedDocumentExtensions = [".pdf", ".doc", ".docx"];
+
+  const allowedVideoTypes = ["video/mp4", "video/webm", "video/ogg"];
+  const allowedVideoExtensions = [".mp4", ".webm", ".ogg"];
 
   // ==========================================
   // TIPTAP EDITOR
@@ -129,6 +153,20 @@ const StartDiscussion: React.FC = () => {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    if (!video) {
+      setVideoPreview("");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(video);
+    setVideoPreview(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [video]);
+
   // ==========================================
   // GET DISCUSSION FOR EDIT
   // ==========================================
@@ -182,6 +220,12 @@ const StartDiscussion: React.FC = () => {
 
         setRemoveExistingImage(false);
 
+        setExistingVideo(discussion.video || "");
+
+        setRemoveExistingVideo(false);
+
+        setVideo(null);
+
         const discussionDescription = discussion.description || "";
 
         setDescription(discussionDescription);
@@ -210,6 +254,109 @@ const StartDiscussion: React.FC = () => {
 
     fetchDiscussion();
   }, [id, isEditMode, editor]);
+
+  // ==========================================
+  // IMPORT DOCUMENT AND FILL FORM
+  // ==========================================
+
+  const handleDocumentChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const extension = `.${file.name.split(".").pop()?.toLowerCase() || ""}`;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Document size must be less than 10MB.");
+      event.target.value = "";
+      return;
+    }
+
+    const isAllowedType =
+      allowedDocumentTypes.includes(file.type) ||
+      allowedDocumentExtensions.includes(extension);
+
+    if (!isAllowedType) {
+      setError("Only PDF, DOC and DOCX files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setImportingDocument(true);
+      setError("");
+      setSuccess("");
+
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setError("You are not logged in. Please login first.");
+        event.target.value = "";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("document", file);
+
+      const response = await axios.post(
+        `${API_URL}/discussions/import-document`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const importedTitle = response.data?.data?.title || "";
+      const importedDescription = response.data?.data?.description || "";
+
+      setTitle(importedTitle.slice(0, 100));
+      setDescription(importedDescription);
+      setDocumentFile(file);
+
+      if (editor) {
+        editor.commands.setContent(DOMPurify.sanitize(importedDescription));
+      }
+
+      setSuccess(
+        "Title and description were filled from your document. Review them, choose a category, then submit.",
+      );
+    } catch (importError: any) {
+      console.error("Failed to import document:", importError);
+
+      setDocumentFile(null);
+
+      if (importError.response?.status === 401) {
+        setError("Unauthorized. Please login again.");
+      } else {
+        setError(
+          importError.response?.data?.message ||
+            "Failed to read this document. Please try another file.",
+        );
+      }
+
+      event.target.value = "";
+    } finally {
+      setImportingDocument(false);
+    }
+  };
+
+  const handleRemoveDocument = () => {
+    setDocumentFile(null);
+
+    const documentInput = document.getElementById(
+      "documentInput",
+    ) as HTMLInputElement | null;
+
+    if (documentInput) {
+      documentInput.value = "";
+    }
+  };
 
   // ==========================================
   // FILE CHANGE
@@ -280,6 +427,53 @@ const StartDiscussion: React.FC = () => {
     setExistingImage("");
 
     setRemoveExistingImage(true);
+  };
+
+  const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const extension = `.${file.name.split(".").pop()?.toLowerCase() || ""}`;
+
+    if (file.size > 50 * 1024 * 1024) {
+      setError("Video size must be less than 50MB.");
+      event.target.value = "";
+      return;
+    }
+
+    const isAllowedType =
+      allowedVideoTypes.includes(file.type) ||
+      allowedVideoExtensions.includes(extension);
+
+    if (!isAllowedType) {
+      setError("Only MP4, WEBM and OGG videos are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setVideo(file);
+    setRemoveExistingVideo(false);
+  };
+
+  const handleRemoveVideo = () => {
+    setVideo(null);
+
+    const videoInput = document.getElementById(
+      "videoInput",
+    ) as HTMLInputElement | null;
+
+    if (videoInput) {
+      videoInput.value = "";
+    }
+  };
+
+  const handleRemoveExistingVideo = () => {
+    setExistingVideo("");
+    setRemoveExistingVideo(true);
   };
 
   // ==========================================
@@ -433,11 +627,15 @@ const StartDiscussion: React.FC = () => {
       formData.append("categoryId", categoryId);
 
       // ========================================
-      // NEW IMAGE
+      // NEW IMAGE (edit only)
       // ========================================
 
-      if (image) {
+      if (isEditMode && image) {
         formData.append("image", image);
+      }
+
+      if (video) {
+        formData.append("video", video);
       }
 
       // ========================================
@@ -446,6 +644,10 @@ const StartDiscussion: React.FC = () => {
 
       if (removeExistingImage) {
         formData.append("removeImage", "true");
+      }
+
+      if (removeExistingVideo) {
+        formData.append("removeVideo", "true");
       }
 
       // ========================================
@@ -484,6 +686,7 @@ const StartDiscussion: React.FC = () => {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            timeout: 180000,
           },
         );
 
@@ -506,6 +709,7 @@ const StartDiscussion: React.FC = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 180000,
       });
 
       console.log("Create discussion response:", response.data);
@@ -573,10 +777,10 @@ const StartDiscussion: React.FC = () => {
       <main className="col-lg-9 col-xl-10 main-wrap">
         <div className="text-center py-5">
           <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+            <span className="visually-hidden">{t("loading")}</span>
           </div>
 
-          <p className="text-muted mt-3">Loading discussion...</p>
+          <p className="text-muted mt-3">{t("loadingDiscussion")}</p>
         </div>
       </main>
     );
@@ -601,7 +805,7 @@ const StartDiscussion: React.FC = () => {
             navigate("/");
           }}
         >
-          Home
+          {t("home")}
         </a>
 
         <span className="mx-1 text-muted">&gt;</span>
@@ -614,13 +818,13 @@ const StartDiscussion: React.FC = () => {
             navigate("/discussion");
           }}
         >
-          Discussions
+          {t("discussions")}
         </a>
 
         <span className="mx-1 text-muted">&gt;</span>
 
         <span className="current">
-          {isEditMode ? "Edit Discussion" : "Start Discussion"}
+          {isEditMode ? t("editDiscussion") : t("startDiscussion")}
         </span>
       </div>
 
@@ -629,13 +833,13 @@ const StartDiscussion: React.FC = () => {
       ====================================== */}
 
       <h1 className="page-title mb-1">
-        {isEditMode ? "Edit Discussion" : "Start a New Discussion"}
+        {isEditMode ? t("editDiscussion") : t("startNewDiscussion")}
       </h1>
 
       <p className="page-subtitle mb-4">
         {isEditMode
-          ? "Update your discussion details."
-          : "Share your thoughts and start a meaningful conversation."}
+          ? t("updateDiscussionDetails")
+          : t("uploadDocHint")}
       </p>
 
       {/* ERROR */}
@@ -652,19 +856,86 @@ const StartDiscussion: React.FC = () => {
 
       <form onSubmit={handleSubmit}>
         {/* ====================================
+            IMPORT DOCUMENT
+        ==================================== */}
+
+        <div className="mb-4">
+          <label className="field-label mb-2">
+            {t("importFromDocument")}{" "}
+            <span className="optional">{t("pdfDocDocx")}</span>
+          </label>
+
+          <label
+            htmlFor="documentInput"
+            className="upload-box"
+            style={{
+              cursor: importingDocument ? "wait" : "pointer",
+              opacity: importingDocument ? 0.7 : 1,
+            }}
+          >
+            <i className="bi bi-file-earmark-text d-block mb-2"></i>
+
+            <div>
+              {importingDocument
+                ? t("readingDocument")
+                : documentFile
+                  ? documentFile.name
+                  : t("dropDocument")}
+            </div>
+
+            {!documentFile && !importingDocument && (
+              <>
+                <div>
+                  <span className="upload-link">{t("orClickBrowse")}</span>
+                </div>
+
+                <div className="upload-hint mt-1">
+                  {t("documentFillHint")}
+                </div>
+              </>
+            )}
+
+            <input
+              type="file"
+              id="documentInput"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              className="d-none"
+              disabled={importingDocument}
+              onChange={handleDocumentChange}
+            />
+          </label>
+
+          {documentFile && !importingDocument && (
+            <div className="mt-2">
+              <small className="text-muted">
+                {t("imported", { name: documentFile.name })}
+              </small>
+
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-danger ms-2"
+                onClick={handleRemoveDocument}
+              >
+                {t("remove")}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ====================================
             TITLE
         ==================================== */}
 
         <div className="mb-4">
           <label className="field-label" htmlFor="title">
-            Title
+            {t("title")}
           </label>
 
           <input
             type="text"
             id="title"
             className="form-control"
-            placeholder="Enter a catchy title for your discussion"
+            placeholder={t("titlePlaceholder")}
             maxLength={100}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -682,7 +953,7 @@ const StartDiscussion: React.FC = () => {
 
         <div className="mb-4">
           <label className="field-label" htmlFor="category">
-            Category
+            {t("category")}
           </label>
 
           <select
@@ -693,7 +964,7 @@ const StartDiscussion: React.FC = () => {
             disabled={categoryLoading}
           >
             <option value="">
-              {categoryLoading ? "Loading categories..." : "Select a category"}
+              {categoryLoading ? t("loadingCategories") : t("selectCategory")}
             </option>
 
             {categories.map((category) => (
@@ -709,7 +980,7 @@ const StartDiscussion: React.FC = () => {
         ==================================== */}
 
         <div className="mb-4">
-          <label className="field-label">Description</label>
+          <label className="field-label">{t("description")}</label>
 
           <div className="editor-wrap">
             {/* ================================
@@ -830,101 +1101,201 @@ const StartDiscussion: React.FC = () => {
         </div>
 
         {/* ====================================
-            IMAGE
+            VIDEO
         ==================================== */}
 
         <div className="mb-4">
           <label className="field-label mb-2">
-            Upload Image <span className="optional">(Optional)</span>
+            {t("uploadVideo")} <span className="optional">{t("optional")}</span>
           </label>
 
-          {/* EXISTING IMAGE */}
-
-          {existingImage && !image && (
+          {existingVideo && !video && (
             <div className="mb-3">
               <div className="mb-2">
-                <small className="text-muted">Current Image</small>
+                <small className="text-muted">{t("currentVideo")}</small>
               </div>
 
-              <div
+              <video
+                src={`${SERVER_URL}${existingVideo}`}
+                controls
                 style={{
-                  position: "relative",
-                  display: "inline-block",
+                  width: "100%",
+                  maxWidth: "420px",
+                  maxHeight: "240px",
+                  borderRadius: "8px",
+                  background: "#000",
                 }}
-              >
-                <img
-                  src={`${SERVER_URL}${existingImage}`}
-                  alt="Current discussion"
-                  style={{
-                    width: "200px",
-                    height: "130px",
-                    objectFit: "cover",
-                    borderRadius: "8px",
-                    border: "1px solid #ddd",
-                  }}
-                />
+              />
 
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger ms-2"
-                  onClick={handleRemoveExistingImage}
-                >
-                  Remove
-                </button>
-              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger ms-2"
+                onClick={handleRemoveExistingVideo}
+              >
+                {t("remove")}
+              </button>
             </div>
           )}
 
-          {/* UPLOAD */}
-
           <label
-            htmlFor="fileInput"
+            htmlFor="videoInput"
             className="upload-box"
             style={{
               cursor: "pointer",
             }}
           >
-            <i className="bi bi-cloud-arrow-up d-block mb-2"></i>
+            <i className="bi bi-camera-video d-block mb-2"></i>
 
-            <div>{image ? image.name : "Drag & drop an image here"}</div>
+            <div>{video ? video.name : t("dropVideo")}</div>
 
-            {!image && (
+            {!video && (
               <>
                 <div>
-                  <span className="upload-link">or click to browse</span>
+                  <span className="upload-link">{t("orClickBrowse")}</span>
                 </div>
 
                 <div className="upload-hint mt-1">
-                  Supports: JPG, PNG, GIF (Max 5MB)
+                  {t("videoHint")}
                 </div>
               </>
             )}
 
             <input
               type="file"
-              id="fileInput"
-              accept=".jpg,.jpeg,.png,.gif"
+              id="videoInput"
+              accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"
               className="d-none"
-              onChange={handleFileChange}
+              onChange={handleVideoChange}
             />
           </label>
 
-          {/* NEW IMAGE */}
+          {videoPreview && (
+            <div className="mt-3">
+              <video
+                src={videoPreview}
+                controls
+                style={{
+                  width: "100%",
+                  maxWidth: "420px",
+                  maxHeight: "240px",
+                  borderRadius: "8px",
+                  background: "#000",
+                }}
+              />
+            </div>
+          )}
 
-          {image && (
+          {video && (
             <div className="mt-2">
-              <small className="text-muted">Selected: {image.name}</small>
+              <small className="text-muted">
+                {t("selected", { name: video.name })}
+              </small>
 
               <button
                 type="button"
                 className="btn btn-sm btn-outline-danger ms-2"
-                onClick={handleRemoveImage}
+                onClick={handleRemoveVideo}
               >
-                Remove
+                {t("remove")}
               </button>
             </div>
           )}
         </div>
+
+        {/* ====================================
+            IMAGE (edit only)
+        ==================================== */}
+
+        {isEditMode && (
+          <div className="mb-4">
+            <label className="field-label mb-2">
+              Upload Image <span className="optional">{t("optional")}</span>
+            </label>
+
+            {existingImage && !image && (
+              <div className="mb-3">
+                <div className="mb-2">
+                  <small className="text-muted">{t("currentImage")}</small>
+                </div>
+
+                <div
+                  style={{
+                    position: "relative",
+                    display: "inline-block",
+                  }}
+                >
+                  <img
+                    src={`${SERVER_URL}${existingImage}`}
+                    alt="Current discussion"
+                    style={{
+                      width: "200px",
+                      height: "130px",
+                      objectFit: "cover",
+                      borderRadius: "8px",
+                      border: "1px solid #ddd",
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger ms-2"
+                    onClick={handleRemoveExistingImage}
+                  >
+                    {t("remove")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <label
+              htmlFor="fileInput"
+              className="upload-box"
+              style={{
+                cursor: "pointer",
+              }}
+            >
+              <i className="bi bi-cloud-arrow-up d-block mb-2"></i>
+
+              <div>{image ? image.name : t("dropImage")}</div>
+
+              {!image && (
+                <>
+                  <div>
+                    <span className="upload-link">{t("orClickBrowse")}</span>
+                  </div>
+
+                  <div className="upload-hint mt-1">
+                    {t("imageHint")}
+                  </div>
+                </>
+              )}
+
+              <input
+                type="file"
+                id="fileInput"
+                accept=".jpg,.jpeg,.png,.gif"
+                className="d-none"
+                onChange={handleFileChange}
+              />
+            </label>
+
+            {image && (
+              <div className="mt-2">
+                <small className="text-muted">
+                  {t("selected", { name: image.name })}
+                </small>
+
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-danger ms-2"
+                  onClick={handleRemoveImage}
+                >
+                  {t("remove")}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ====================================
             ACTION BUTTONS
@@ -937,10 +1308,14 @@ const StartDiscussion: React.FC = () => {
             onClick={handleCancel}
             disabled={loading}
           >
-            Cancel
+            {t("cancel")}
           </button>
 
-          <button type="submit" className="btn btn-brand" disabled={loading}>
+          <button
+            type="submit"
+            className="btn btn-brand"
+            disabled={loading || importingDocument}
+          >
             {loading ? (
               <>
                 <span
@@ -948,12 +1323,12 @@ const StartDiscussion: React.FC = () => {
                   role="status"
                 ></span>
 
-                {isEditMode ? "Updating..." : "Starting..."}
+                {isEditMode ? t("updating") : t("starting")}
               </>
             ) : isEditMode ? (
-              "Update Discussion"
+              t("updateDiscussion")
             ) : (
-              "Start Discussion"
+              t("startDiscussion")
             )}
           </button>
         </div>

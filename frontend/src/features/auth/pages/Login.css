@@ -1,8 +1,8 @@
 
 
 :root {
-  --brand: #0d4930;
-  --brand-dark: #093823;
+  --brand: #0b472e;
+  --brand-dark: #083322;
   --brand-tint: #e7efe9;
   --ink: #1f2430;
   --muted: #6b7280;
@@ -42,11 +42,35 @@ a {
 ========================= */
 
 .shell {
-  /* width: 100%;
-  min-height: 100vh;
-  display: flex;
-  align-items: stretch;
-  justify-content: center; */
+  position: relative;
+}
+
+.auth-language {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+}
+
+.language-switcher{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:#fff;
+  border:1px solid var(--card-border);
+  border-radius:999px;
+  padding:4px 10px 4px 12px;
+  color: var(--muted);
+}
+
+.language-switcher select{
+  border:none;
+  background:transparent;
+  font-size:13px;
+  font-weight:600;
+  color: var(--ink);
+  cursor:pointer;
+  outline:none;
 }
 
 .auth-panel {
@@ -437,9 +461,9 @@ a {
 
   border-radius: 10px;
 
-  padding: 0.75rem 1rem;
+  padding: 0.55rem 1.25rem;
 
-  font-size: 0.98rem;
+  font-size: 0.9rem;
 
   cursor: pointer;
 

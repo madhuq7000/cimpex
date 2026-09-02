@@ -1,8 +1,10 @@
 // core/api/axios.ts
 import axios from "axios";
 
+import { API_URL } from "../config/env";
+
 const api = axios.create({
-  baseURL: "https://www.vaadsamvaad.com/api",
+  baseURL: API_URL,
 });
 
 api.interceptors.request.use((config) => {

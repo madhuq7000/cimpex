@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import DOMPurify from "dompurify";
+
+import { API_URL, SERVER_URL } from "../../../core/config/env";
+import { useLanguage } from "../../../core/context/LanguageContext";
+import { downloadDiscussionPdf } from "./downloadDiscussionPdf";
+import TranslatedContent from "../../../core/i18n/TranslatedContent";
 
 // ==========================================
 // CATEGORY
@@ -35,22 +39,14 @@ interface DiscussionItem {
   };
 
   image?: string;
+  video?: string;
   createdAt?: string;
   commentCount?: number;
 }
 
-// ==========================================
-// SERVER
-// ==========================================
-
-const SERVER_URL =
-  import.meta.env.VITE_SERVER_URL || "https://www.vaadsamvaad.com";
-
-const API_URL = `${SERVER_URL}/api`;
-
-// ==========================================
-// DEFAULT PROFILE IMAGE
-// ==========================================
+interface DiscussionOutletContext {
+  searchKeyword?: string;
+}
 
 const DEFAULT_PROFILE_IMAGE = `${SERVER_URL}/uploads/profiles/default-profile.png`;
 
@@ -98,8 +94,18 @@ const getProfileImageUrl = (profileImage?: string) => {
 // DISCUSSION COMPONENT
 // ==========================================
 
+const htmlToSearchText = (value?: string) =>
+  (value || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
 const Discussion: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const outletContext = useOutletContext<DiscussionOutletContext | undefined>();
+  const { t } = useLanguage();
 
   // ==========================================
   // STATES
@@ -118,6 +124,14 @@ const Discussion: React.FC = () => {
   const [error, setError] = useState<string>("");
 
   const [categoryError, setCategoryError] = useState<string>("");
+
+  const [downloadingPdfId, setDownloadingPdfId] = useState<string>("");
+
+  const searchKeyword = (
+    outletContext?.searchKeyword ??
+    searchParams.get("q") ??
+    ""
+  ).trim();
 
   // ==========================================
   // PROFILE IMAGE ERROR
@@ -152,7 +166,7 @@ const Discussion: React.FC = () => {
       } catch (error) {
         console.error("Failed to fetch discussions:", error);
 
-        setError("Failed to load discussions.");
+        setError(t("failedLoadDiscussions"));
       } finally {
         setLoading(false);
       }
@@ -180,7 +194,7 @@ const Discussion: React.FC = () => {
       } catch (error) {
         console.error("Failed to fetch categories:", error);
 
-        setCategoryError("Failed to load categories.");
+        setCategoryError(t("failedLoadCategories"));
       } finally {
         setCategoryLoading(false);
       }
@@ -193,12 +207,33 @@ const Discussion: React.FC = () => {
   // FILTER DISCUSSIONS
   // ==========================================
 
-  const filteredDiscussions =
-    selectedCategory === "all"
-      ? discussions
-      : discussions.filter(
-          (discussion) => discussion.category?._id === selectedCategory,
-        );
+  const filteredDiscussions = discussions.filter((discussion) => {
+    const matchesCategory =
+      selectedCategory === "all" ||
+      discussion.category?._id === selectedCategory;
+
+    if (!matchesCategory) {
+      return false;
+    }
+
+    if (!searchKeyword) {
+      return true;
+    }
+
+    const needle = searchKeyword.toLowerCase();
+    const haystack = [
+      discussion.title,
+      htmlToSearchText(discussion.description),
+      discussion.category?.name,
+      discussion.createdBy?.name,
+      discussion.createdBy?.email,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(needle);
+  });
 
   // ==========================================
   // CATEGORY CLICK
@@ -214,6 +249,40 @@ const Discussion: React.FC = () => {
 
   const handleViewDiscussion = (discussionId: string) => {
     navigate(`/discussion/${discussionId}`);
+  };
+
+  const handleDownloadPdf = async (discussion: DiscussionItem) => {
+    if (downloadingPdfId) {
+      return;
+    }
+
+    try {
+      setDownloadingPdfId(discussion._id);
+      setError("");
+
+      const response = await axios.get(
+        `${API_URL}/comments/discussion/${discussion._id}`,
+      );
+
+      const comments = Array.isArray(response.data.data)
+        ? response.data.data
+        : [];
+
+      await downloadDiscussionPdf({
+        title: discussion.title,
+        description: discussion.description,
+        categoryName: discussion.category?.name,
+        authorName:
+          discussion.createdBy?.name || discussion.createdBy?.email || "User",
+        createdAt: discussion.createdAt,
+        comments,
+      });
+    } catch (downloadError) {
+      console.error("Failed to download discussion PDF:", downloadError);
+      setError(t("pdfFailed"));
+    } finally {
+      setDownloadingPdfId("");
+    }
   };
 
   // ==========================================
@@ -236,10 +305,18 @@ const Discussion: React.FC = () => {
 
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="mb-1">Latest Discussions</h2>
+          <h2 className="mb-1">
+            {searchKeyword
+              ? t("searchResultsFor", { query: searchKeyword })
+              : t("latestDiscussions")}
+          </h2>
 
           <p className="text-muted mb-0">
-            Explore and participate in interesting discussions.
+            {searchKeyword
+              ? filteredDiscussions.length === 1
+                ? t("discussionFound", { count: filteredDiscussions.length })
+                : t("discussionsFound", { count: filteredDiscussions.length })
+              : t("exploreDiscussions")}
           </p>
         </div>
 
@@ -248,7 +325,7 @@ const Discussion: React.FC = () => {
           className="btn btn-primary"
           onClick={handleCreateDiscussion}
         >
-          + Start Discussion
+          + {t("startDiscussion")}
         </button>
       </div>
 
@@ -264,13 +341,13 @@ const Discussion: React.FC = () => {
           className={`chip ${selectedCategory === "all" ? "active" : ""}`}
           onClick={() => handleCategoryClick("all")}
         >
-          All
+          {t("all")}
         </button>
 
         {/* CATEGORY LOADING */}
 
         {categoryLoading && (
-          <span className="text-muted ms-2">Loading categories...</span>
+          <span className="text-muted ms-2">{t("loadingCategories")}</span>
         )}
 
         {/* CATEGORY ERROR */}
@@ -292,7 +369,7 @@ const Discussion: React.FC = () => {
               }`}
               onClick={() => handleCategoryClick(category._id)}
             >
-              {category.name}
+              <TranslatedContent text={category.name} />
             </button>
           ))}
       </div>
@@ -312,7 +389,7 @@ const Discussion: React.FC = () => {
               <span className="visually-hidden">Loading...</span>
             </div>
 
-            <p className="text-muted mt-3">Loading discussions...</p>
+            <p className="text-muted mt-3">{t("loadingDiscussions")}</p>
           </div>
         )}
 
@@ -336,7 +413,7 @@ const Discussion: React.FC = () => {
               const authorName =
                 discussion.createdBy?.name ||
                 discussion.createdBy?.email ||
-                "User";
+                t("user");
 
               // ==============================
               // AUTHOR PROFILE IMAGE
@@ -356,7 +433,13 @@ const Discussion: React.FC = () => {
 
                       <div className="col-md-3 col-lg-2">
                         <div className="thumb">
-                          {discussion.image ? (
+                          {discussion.video ? (
+                            <video
+                              src={`${SERVER_URL}${discussion.video}`}
+                              muted
+                              preload="metadata"
+                            />
+                          ) : discussion.image ? (
                             <img
                               src={`${SERVER_URL}${discussion.image}`}
                               alt={discussion.title}
@@ -377,19 +460,20 @@ const Discussion: React.FC = () => {
                       <div className="col-md-9 col-lg-10 d-flex flex-column">
                         {/* TITLE */}
 
-                        <h2 className="card-title mb-1">{discussion.title}</h2>
+                        <TranslatedContent
+                          as="h2"
+                          className="card-title mb-1"
+                          text={discussion.title}
+                        />
 
-                        {/* DESCRIPTION */}
-
-                        <div
+                        <TranslatedContent
+                          as="div"
                           className="card-desc mb-2"
+                          html
+                          text={discussion.description}
                           style={{
                             color: "#374151",
-
                             fontSize: ".95rem",
-                          }}
-                          dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(discussion.description),
                           }}
                         />
 
@@ -414,7 +498,11 @@ const Discussion: React.FC = () => {
                           {/* CATEGORY */}
 
                           <span className="tag">
-                            {discussion.category?.name || "General"}
+                            {discussion.category?.name ? (
+                              <TranslatedContent text={discussion.category.name} />
+                            ) : (
+                              t("general")
+                            )}
                           </span>
 
                           {/* TIME */}
@@ -445,7 +533,7 @@ const Discussion: React.FC = () => {
                           <button
                             type="button"
                             className="bookmark-btn"
-                            aria-label="Bookmark"
+                            aria-label={t("bookmark")}
                           >
                             <i className="bi bi-bookmark"></i>
                           </button>
@@ -455,13 +543,26 @@ const Discussion: React.FC = () => {
                                 VIEW DISCUSSION
                             ===================== */}
 
-                        <button
-                          type="button"
-                          className="btn btn-outline-primary mt-3 align-self-start"
-                          onClick={() => handleViewDiscussion(discussion._id)}
-                        >
-                          View Discussion
-                        </button>
+                        <div className="d-flex flex-wrap gap-2 mt-3">
+                          <button
+                            type="button"
+                            className="btn btn-outline-primary align-self-start"
+                            onClick={() => handleViewDiscussion(discussion._id)}
+                          >
+                            {t("viewDiscussion")}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="btn btn-outline-primary align-self-start"
+                            disabled={downloadingPdfId === discussion._id}
+                            onClick={() => handleDownloadPdf(discussion)}
+                          >
+                            {downloadingPdfId === discussion._id
+                              ? t("preparingPdf")
+                              : t("downloadPdf")}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </article>
@@ -477,12 +578,14 @@ const Discussion: React.FC = () => {
 
         {!loading && !error && filteredDiscussions.length === 0 && (
           <div className="text-center py-5">
-            <h5>No discussions available</h5>
+            <h5>{t("noDiscussions")}</h5>
 
             <p className="text-muted">
-              {selectedCategory === "all"
-                ? "Be the first person to start a discussion."
-                : "There are no discussions in this category yet."}
+              {searchKeyword
+                ? t("noSearchMatches")
+                : selectedCategory === "all"
+                  ? t("beFirst")
+                  : t("noCategoryDiscussions")}
             </p>
 
             <button
@@ -490,7 +593,7 @@ const Discussion: React.FC = () => {
               className="btn btn-primary"
               onClick={handleCreateDiscussion}
             >
-              Start Discussion
+              {t("startDiscussion")}
             </button>
           </div>
         )}

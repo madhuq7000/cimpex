@@ -17,12 +17,30 @@ connectDB();
 
 const app = express();
 
-// ========================================
-// CORS
-// ========================================
+const defaultOrigins = [
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "https://www.vaadsamvaad.com",
+  "https://vaadsamvaad.com",
+];
+
+const extraOrigins = String(process.env.CLIENT_URL || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = [...new Set([...defaultOrigins, ...extraOrigins])];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   }),
 );

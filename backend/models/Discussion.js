@@ -19,6 +19,11 @@ const discussionSchema = new mongoose.Schema(
       default: "",
     },
 
+    video: {
+      type: String,
+      default: "",
+    },
+
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",

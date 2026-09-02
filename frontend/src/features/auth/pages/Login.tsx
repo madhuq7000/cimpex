@@ -3,9 +3,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginApi } from "../authApi";
 import { useAuth } from "../../../core/context/AuthContext";
+import { useLanguage } from "../../../core/context/LanguageContext";
 import type { LoginPayload } from "../types";
 import loginImage from "../../../assets/images/login.png";
 import logoImage from "../../../assets/images/logo.png";
+import LanguageSwitcher from "../../../sharedComponent/LanguageSwitcher";
 import "./Login.css";
 
 export default function Login() {
@@ -19,6 +21,7 @@ export default function Login() {
 
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useLanguage();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -40,7 +43,7 @@ export default function Login() {
 
       navigate("/discussion");
     } catch (err: any) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(err.response?.data?.message || t("loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -48,6 +51,9 @@ export default function Login() {
 
   return (
     <div className="shell">
+      <div className="auth-language">
+        <LanguageSwitcher />
+      </div>
       <div className="auth-panel row g-0">
         {/* Left: brand / illustration / features */}
         <div className="col-lg-6 left-side">
@@ -63,13 +69,10 @@ export default function Login() {
           </div>
 
           <h1 className="hero-title">
-            Welcome <span className="accent">Back!</span>
+            {t("welcomeBack")} <span className="accent">{t("back")}</span>
           </h1>
 
-          <p className="hero-copy">
-            Login to continue your discussions and share your views with the
-            community.
-          </p>
+          <p className="hero-copy">{t("loginHero")}</p>
 
           <div className="illustration-wrap">
             <img src={loginImage} alt="Login illustration" />
@@ -82,9 +85,9 @@ export default function Login() {
               </span>
 
               <div>
-                <div className="feature-title">Meaningful Discussions</div>
+                <div className="feature-title">{t("meaningfulDiscussions")}</div>
                 <div className="feature-desc">
-                  Engage in conversations that matter.
+                  {t("meaningfulDiscussionsDesc")}
                 </div>
               </div>
             </div>
@@ -95,9 +98,9 @@ export default function Login() {
               </span>
 
               <div>
-                <div className="feature-title">Share Your Views</div>
+                <div className="feature-title">{t("shareYourViews")}</div>
                 <div className="feature-desc">
-                  Express your opinions and learn from others.
+                  {t("shareYourViewsDesc")}
                 </div>
               </div>
             </div>
@@ -108,9 +111,9 @@ export default function Login() {
               </span>
 
               <div>
-                <div className="feature-title">Build Community</div>
+                <div className="feature-title">{t("buildCommunity")}</div>
                 <div className="feature-desc">
-                  Connect with like-minded people.
+                  {t("buildCommunityDesc")}
                 </div>
               </div>
             </div>
@@ -121,9 +124,9 @@ export default function Login() {
               </span>
 
               <div>
-                <div className="feature-title">Safe &amp; Respectful</div>
+                <div className="feature-title">{t("safeRespectful")}</div>
                 <div className="feature-desc">
-                  A positive environment for healthy discussions.
+                  {t("safeRespectfulDesc")}
                 </div>
               </div>
             </div>
@@ -133,16 +136,16 @@ export default function Login() {
         {/* Right: Login form */}
         <div className="col-lg-6 right-side">
           <h2 className="login-title">
-            Login to <span className="accent">VaadSamvaad</span>
+            {t("loginToVaad")} <span className="accent">VaadSamvaad</span>
           </h2>
 
-          <p className="login-sub">Welcome back! Please enter your details.</p>
+          <p className="login-sub">{t("welcomeEnterDetails")}</p>
 
           {error && <div className="alert alert-danger">{error}</div>}
 
           <form onSubmit={submit}>
             <div className="mb-3">
-              <label className="field-label">Email Address</label>
+              <label className="field-label">{t("emailAddress")}</label>
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
                   <i className="bi bi-envelope"></i>
@@ -154,14 +157,14 @@ export default function Login() {
                   className="form-control"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="Enter your email"
+                  placeholder={t("enterEmail")}
                   required
                 />
               </div>
             </div>
 
             <div className="mb-3">
-              <label className="field-label">Password</label>
+              <label className="field-label">{t("password")}</label>
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
                   <i className="bi bi-lock"></i>
@@ -173,7 +176,7 @@ export default function Login() {
                   className="form-control"
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="Enter your password"
+                  placeholder={t("enterPassword")}
                   required
                 />
               </div>
@@ -184,13 +187,13 @@ export default function Login() {
               className="btn-login w-100 d-flex align-items-center justify-content-center gap-2"
               disabled={loading}
             >
-              {loading ? "Logging in..." : "Login"}
+              {loading ? t("loggingIn") : t("login")}
               <i className="bi bi-arrow-right"></i>
             </button>
           </form>
 
           <p className="register-line">
-            Don't have an account? <Link to="/register">Register now</Link>
+            {t("noAccount")} <Link to="/register">{t("registerNow")}</Link>
           </p>
         </div>
       </div>

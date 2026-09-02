@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { registerApi } from "../authApi";
 import type { RegisterPayload } from "../types";
+import { useLanguage } from "../../../core/context/LanguageContext";
+import LanguageSwitcher from "../../../sharedComponent/LanguageSwitcher";
 
 import registerImage from "../../../assets/images/register.png";
 import logoImage from "../../../assets/images/logo.png";
@@ -11,6 +13,7 @@ import "./Login.css";
 
 export default function Register() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   // ==========================================
   // FORM STATE
@@ -187,6 +190,9 @@ export default function Register() {
 
   return (
     <div className="shell">
+      <div className="auth-language">
+        <LanguageSwitcher />
+      </div>
       <div className="auth-panel row g-0">
         {/* ======================================
             LEFT SIDE
@@ -205,12 +211,10 @@ export default function Register() {
           </div>
 
           <h1 className="hero-title">
-            Join the <span className="accent">Conversation!</span>
+            {t("joinConversation")} <span className="accent">{t("conversation")}</span>
           </h1>
 
-          <p className="hero-copy">
-            Create an account and start sharing your views with the community.
-          </p>
+          <p className="hero-copy">{t("registerHero")}</p>
 
           <div className="illustration-wrap">
             <img src={registerImage} alt="Register" />
@@ -223,10 +227,10 @@ export default function Register() {
               </span>
 
               <div>
-                <div className="feature-title">Meaningful Discussions</div>
+                <div className="feature-title">{t("meaningfulDiscussions")}</div>
 
                 <div className="feature-desc">
-                  Engage in conversations that matter.
+                  {t("meaningfulDiscussionsDesc")}
                 </div>
               </div>
             </div>
@@ -237,10 +241,10 @@ export default function Register() {
               </span>
 
               <div>
-                <div className="feature-title">Share Your Views</div>
+                <div className="feature-title">{t("shareYourViews")}</div>
 
                 <div className="feature-desc">
-                  Express your opinions and learn from others.
+                  {t("shareYourViewsDesc")}
                 </div>
               </div>
             </div>
@@ -251,10 +255,10 @@ export default function Register() {
               </span>
 
               <div>
-                <div className="feature-title">Build Community</div>
+                <div className="feature-title">{t("buildCommunity")}</div>
 
                 <div className="feature-desc">
-                  Connect with like-minded people.
+                  {t("buildCommunityDesc")}
                 </div>
               </div>
             </div>
@@ -265,10 +269,10 @@ export default function Register() {
               </span>
 
               <div>
-                <div className="feature-title">Safe &amp; Respectful</div>
+                <div className="feature-title">{t("safeRespectful")}</div>
 
                 <div className="feature-desc">
-                  A positive environment for healthy discussions.
+                  {t("safeRespectfulDesc")}
                 </div>
               </div>
             </div>
@@ -281,12 +285,10 @@ export default function Register() {
 
         <div className="col-lg-6 right-side">
           <h2 className="form-title">
-            Create Your <span className="accent">Account</span>
+            {t("createYour")} <span className="accent">{t("account")}</span>
           </h2>
 
-          <p className="form-sub">
-            Sign up to VaadSamvaad and be a part of meaningful discussions.
-          </p>
+          <p className="form-sub">{t("signUpSub")}</p>
 
           <form onSubmit={submit}>
             {/* ==================================
@@ -294,7 +296,7 @@ export default function Register() {
             ================================== */}
 
             <div className="mb-4 text-center">
-              <label className="field-label d-block mb-2">Profile Image</label>
+              <label className="field-label d-block mb-2">{t("profileImage")}</label>
 
               <div className="mb-3">
                 {profilePreview ? (
@@ -344,7 +346,7 @@ export default function Register() {
             ================================== */}
 
             <div className="mb-3">
-              <label className="field-label">Full Name</label>
+              <label className="field-label">{t("fullName")}</label>
 
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
@@ -355,7 +357,7 @@ export default function Register() {
                   type="text"
                   name="fullName"
                   className="form-control"
-                  placeholder="Enter your full name"
+                  placeholder={t("enterFullName")}
                   value={form.fullName}
                   onChange={handleChange}
                   required
@@ -368,7 +370,7 @@ export default function Register() {
             ================================== */}
 
             <div className="mb-3">
-              <label className="field-label">Email Address</label>
+              <label className="field-label">{t("emailAddress")}</label>
 
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
@@ -379,7 +381,7 @@ export default function Register() {
                   type="email"
                   name="email"
                   className="form-control"
-                  placeholder="Enter your email"
+                  placeholder={t("enterEmail")}
                   value={form.email}
                   onChange={handleChange}
                   required
@@ -392,7 +394,7 @@ export default function Register() {
             ================================== */}
 
             <div className="mb-3">
-              <label className="field-label">Username</label>
+              <label className="field-label">{t("username")}</label>
 
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
@@ -403,7 +405,7 @@ export default function Register() {
                   type="text"
                   name="name"
                   className="form-control"
-                  placeholder="Choose a username"
+                  placeholder={t("chooseUsername")}
                   value={form.name}
                   onChange={handleChange}
                   required
@@ -416,7 +418,7 @@ export default function Register() {
             ================================== */}
 
             <div className="mb-3">
-              <label className="field-label">Password</label>
+              <label className="field-label">{t("password")}</label>
 
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
@@ -427,7 +429,7 @@ export default function Register() {
                   type={showPassword ? "text" : "password"}
                   name="password"
                   className="form-control"
-                  placeholder="Create a password"
+                  placeholder={t("createPassword")}
                   value={form.password}
                   onChange={handleChange}
                   required
@@ -450,7 +452,7 @@ export default function Register() {
             ================================== */}
 
             <div className="mb-3">
-              <label className="field-label">Confirm Password</label>
+              <label className="field-label">{t("confirmPassword")}</label>
 
               <div className="input-group input-group-custom px-2">
                 <span className="input-group-text">
@@ -460,7 +462,7 @@ export default function Register() {
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   className="form-control"
-                  placeholder="Confirm your password"
+                  placeholder={t("confirmYourPassword")}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
@@ -540,11 +542,11 @@ export default function Register() {
                     className="spinner-border spinner-border-sm"
                     role="status"
                   ></span>
-                  Registering...
+                  {t("registering")}
                 </>
               ) : (
                 <>
-                  Register
+                  {t("register")}
                   <i className="bi bi-arrow-right"></i>
                 </>
               )}
@@ -1082,7 +1084,7 @@ export default function Register() {
           </div>
 
           <p className="login-line">
-            Already have an account? <Link to="/login">Login now</Link>
+            {t("alreadyAccount")} <Link to="/login">{t("loginNow")}</Link>
           </p>
         </div>
       </div>

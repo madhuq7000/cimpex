@@ -1,6 +1,25 @@
 const Discussion = require("../models/Discussion");
 const Category = require("../models/Category");
 const Comment = require("../models/Comment");
+const {
+  extractDiscussionDocument,
+} = require("../utils/extractDiscussionDocument");
+
+const getUploadedFile = (req, fieldName) => {
+  if (req.files && req.files[fieldName] && req.files[fieldName][0]) {
+    return req.files[fieldName][0];
+  }
+
+  return null;
+};
+
+const getDiscussionMediaPath = (file) => {
+  if (!file) {
+    return "";
+  }
+
+  return `/uploads/discussions/${file.filename}`;
+};
 
 // ==========================================
 // CREATE DISCUSSION
@@ -10,7 +29,7 @@ const startDiscussion = async (req, res) => {
   try {
     console.log("========== CREATE DISCUSSION ==========");
     console.log("Body:", req.body);
-    console.log("File:", req.file);
+    console.log("Files:", req.files);
     console.log("User:", req.user);
 
     const { title, description, categoryId } = req.body;
@@ -31,17 +50,15 @@ const startDiscussion = async (req, res) => {
       });
     }
 
-    let image = "";
-
-    if (req.file) {
-      image = `/uploads/discussions/${req.file.filename}`;
-    }
+    const imageFile = getUploadedFile(req, "image");
+    const videoFile = getUploadedFile(req, "video");
 
     const discussion = await Discussion.create({
       title: title.trim(),
       description: description.trim(),
       category: categoryId,
-      image,
+      image: getDiscussionMediaPath(imageFile),
+      video: getDiscussionMediaPath(videoFile),
       createdBy: req.user._id,
     });
 
@@ -192,7 +209,7 @@ const updateDiscussion = async (req, res) => {
     console.log("========== UPDATE DISCUSSION ==========");
     console.log("Discussion ID:", req.params.id);
     console.log("Body:", req.body);
-    console.log("File:", req.file);
+    console.log("Files:", req.files);
 
     const { id } = req.params;
 
@@ -201,6 +218,7 @@ const updateDiscussion = async (req, res) => {
       description,
       categoryId,
       removeImage,
+      removeVideo,
     } = req.body;
 
     // ==========================================
@@ -271,20 +289,19 @@ const updateDiscussion = async (req, res) => {
     // UPDATE IMAGE
     // ==========================================
 
-    if (req.file) {
-      discussion.image =
-        `/uploads/discussions/${req.file.filename}`;
+    const imageFile = getUploadedFile(req, "image");
+    const videoFile = getUploadedFile(req, "video");
 
-      console.log(
-        "New image:",
-        discussion.image,
-      );
+    if (imageFile) {
+      discussion.image = getDiscussionMediaPath(imageFile);
     } else if (removeImage === "true") {
       discussion.image = "";
+    }
 
-      console.log(
-        "Existing image removed",
-      );
+    if (videoFile) {
+      discussion.video = getDiscussionMediaPath(videoFile);
+    } else if (removeVideo === "true") {
+      discussion.video = "";
     }
 
     await discussion.save();
@@ -333,6 +350,39 @@ const updateDiscussion = async (req, res) => {
 };
 
 // ==========================================
+// IMPORT DOCUMENT AND FILL DISCUSSION FORM
+// POST /api/discussions/import-document
+// ==========================================
+const importDiscussionDocument = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a PDF, DOC or DOCX file",
+      });
+    }
+
+    const extracted = await extractDiscussionDocument(req.file);
+
+    return res.status(200).json({
+      success: true,
+      message: "Document imported successfully",
+      data: extracted,
+    });
+  } catch (error) {
+    console.error("Import discussion document error:", error);
+
+    const statusCode = error.statusCode || 500;
+
+    return res.status(statusCode).json({
+      success: false,
+      message:
+        error.message || "Failed to read text from this document",
+    });
+  }
+};
+
+// ==========================================
 // EXPORTS
 // ==========================================
 
@@ -341,4 +391,5 @@ module.exports = {
   getDiscussions,
   getDiscussionById,
   updateDiscussion,
+  importDiscussionDocument,
 };

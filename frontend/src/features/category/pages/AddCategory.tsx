@@ -11,10 +11,12 @@ import {
 } from "../categoryApi";
 
 import type { Category } from "../types";
+import { useLanguage } from "../../../core/context/LanguageContext";
 
 import "./AddCategory.css";
 
 export default function AddCategory() {
+  const { t } = useLanguage();
   // ==========================================
   // STATES
   // ==========================================
@@ -216,7 +218,7 @@ export default function AddCategory() {
           <input
             type="text"
             className="form-control"
-            placeholder="Category Name"
+            placeholder={t("categoryName")}
             value={name}
             onChange={handleChange}
           />
@@ -225,16 +227,16 @@ export default function AddCategory() {
 
           <button
             type="submit"
-            className="btn btn-primary btn-lg add-category-btn"
+            className="btn btn-primary add-category-btn"
             disabled={loading}
           >
             {loading
               ? editingId
-                ? "Updating..."
-                : "Adding..."
+                ? t("updating")
+                : t("adding")
               : editingId
-                ? "Update Category"
-                : "Add Category"}
+                ? t("updateCategory")
+                : t("addCategory")}
           </button>
 
           {/* CANCEL EDIT BUTTON */}
@@ -242,11 +244,11 @@ export default function AddCategory() {
           {editingId && (
             <button
               type="button"
-              className="btn btn-secondary btn-lg ms-2"
+              className="btn btn-cancel ms-2"
               onClick={handleCancelEdit}
               disabled={loading}
             >
-              Cancel
+              {t("cancel")}
             </button>
           )}
         </div>
@@ -265,13 +267,13 @@ export default function AddCategory() {
 
         {loadingCategories ? (
           <div className="listItem">
-            <span>Loading...</span>
+            <span>{t("loading")}</span>
           </div>
         ) : categories.length === 0 ? (
           /* NO CATEGORY */
 
           <div className="listItem">
-            <span>No categories found</span>
+            <span>{t("noCategoriesFound")}</span>
           </div>
         ) : (
           /* CATEGORY LIST */
@@ -290,7 +292,7 @@ export default function AddCategory() {
                 <button
                   type="button"
                   className="btn p-0 border-0 bg-transparent"
-                  title="Edit Category"
+                  title={t("editCategory")}
                   onClick={() => handleEdit(category)}
                 >
                   <i
@@ -307,7 +309,7 @@ export default function AddCategory() {
                 <button
                   type="button"
                   className="btn p-0 border-0 bg-transparent"
-                  title="Delete Category"
+                  title={t("deleteCategory")}
                   onClick={() => handleDelete(category._id)}
                 >
                   <i

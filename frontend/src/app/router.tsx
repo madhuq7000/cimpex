@@ -11,6 +11,8 @@ import AddCategory from "../features/category/pages/AddCategory";
 import Discussion from "../features/auth/discussion/discussion";
 import DiscussionDetails from "../features/auth/discussion/discussiondetails";
 import StartDiscussion from "../features/auth/discussion/startDiscussion";
+import Faq from "../features/pages/Faq";
+import CommunityGuidelines from "../features/pages/CommunityGuidelines";
 
 const Dashboard = () => <h1>Dashboard</h1>;
 
@@ -45,6 +47,10 @@ export default function AppRouter() {
           <Route path="/discussion" element={<Discussion />} />
 
           <Route path="/discussion/:id" element={<DiscussionDetails />} />
+
+          <Route path="/faq" element={<Faq />} />
+
+          <Route path="/community-guidelines" element={<CommunityGuidelines />} />
 
           {/* ====================================
               PROTECTED ROUTES

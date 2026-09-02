@@ -1,4 +1,103 @@
-/* https://feathericons.com/ */
-body{
-    font-family: "Inter", sans-serif !important;
+:root {
+  --brand: #0b472e;
+  --brand-dark: #083322;
+  --bs-primary: #0b472e;
+  --bs-primary-rgb: 11, 71, 46;
+  --bs-link-color: #0b472e;
+  --bs-link-hover-color: #083322;
+}
+
+body {
+  font-family: "Segoe UI", Inter, system-ui, -apple-system, sans-serif !important;
+}
+
+.btn:not(.btn-close):not(.accordion-button) {
+  font-family: inherit;
+  font-size: 0.9rem !important;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+  border-radius: 10px;
+}
+
+.btn:not(.btn-sm):not(.btn-lg):not(.btn-close):not(.accordion-button) {
+  padding: 0.55rem 1.25rem;
+}
+
+.btn-sm:not(.btn-close) {
+  padding: 0.45rem 1rem;
+}
+
+.btn-lg {
+  padding: 0.55rem 1.25rem;
+}
+
+.btn-primary,
+.btn-brand,
+.btn-login {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #0b472e;
+  --bs-btn-border-color: #0b472e;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #083322;
+  --bs-btn-hover-border-color: #083322;
+  --bs-btn-focus-shadow-rgb: 11, 71, 46;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #083322;
+  --bs-btn-active-border-color: #083322;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #0b472e;
+  --bs-btn-disabled-border-color: #0b472e;
+  background-color: #0b472e;
+  border-color: #0b472e;
+  color: #fff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-brand:hover,
+.btn-brand:focus,
+.btn-login:hover,
+.btn-login:focus {
+  background-color: #083322;
+  border-color: #083322;
+  color: #fff;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: #0b472e;
+  --bs-btn-border-color: #0b472e;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #0b472e;
+  --bs-btn-hover-border-color: #0b472e;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #0b472e;
+  --bs-btn-active-border-color: #0b472e;
+  --bs-btn-disabled-color: #0b472e;
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: #0b472e;
+  --bs-btn-focus-shadow-rgb: 11, 71, 46;
+  color: #0b472e;
+  border-color: #0b472e;
+  background-color: transparent;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+  background-color: #0b472e;
+  border-color: #0b472e;
+  color: #fff;
+}
+
+.btn-outline-secondary,
+.btn-cancel,
+.btn-secondary {
+  font-family: inherit;
+  font-size: 0.9rem !important;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.spinner-border.text-primary {
+  color: #0b472e !important;
 }

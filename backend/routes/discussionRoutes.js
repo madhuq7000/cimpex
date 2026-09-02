@@ -5,13 +5,26 @@ const {
   getDiscussions,
   getDiscussionById,
   updateDiscussion,
+  importDiscussionDocument,
 } = require("../auth-controllers/discussionController");
 
 const { protect } = require("../middleware/authMiddleware");
 
-const uploadDiscussion = require("../middleware/uploadDiscussion");
+const handleDiscussionMediaUpload = require("../middleware/uploadDiscussion");
+const handleDiscussionDocumentUpload = require("../middleware/uploadDiscussionDocument");
 
 const router = express.Router();
+
+// ==========================================
+// IMPORT DOCUMENT
+// POST /api/discussions/import-document
+// ==========================================
+router.post(
+  "/import-document",
+  protect,
+  handleDiscussionDocumentUpload,
+  importDiscussionDocument
+);
 
 // ==========================================
 // CREATE DISCUSSION
@@ -20,7 +33,7 @@ const router = express.Router();
 router.post(
   "/",
   protect,
-  uploadDiscussion.single("image"),
+  handleDiscussionMediaUpload,
   startDiscussion
 );
 
@@ -43,7 +56,7 @@ router.get("/:id", getDiscussionById);
 router.put(
   "/:id",
   protect,
-  uploadDiscussion.single("image"),
+  handleDiscussionMediaUpload,
   updateDiscussion
 );
 

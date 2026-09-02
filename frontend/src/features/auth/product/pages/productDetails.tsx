@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 
 import { getProductByIdApi } from "../productApi";
 import type { Product } from "../types";
+import { SERVER_URL } from "../../../../core/config/env";
 import "./productDetails.css";
 
 export default function ProductDetails() {
@@ -47,7 +48,7 @@ export default function ProductDetails() {
         {/* LARGE IMAGE */}
         <div className="bigImage mb-3">
           <img
-            src={`https://www.vaadsamvaad.com/uploads/${selectedImage}`}
+            src={`${SERVER_URL}/uploads/${selectedImage}`}
             alt={product.name}
             className="img-fluid rounded"
           />
@@ -71,7 +72,7 @@ export default function ProductDetails() {
               }}
             >
               <img
-                src={`https://www.vaadsamvaad.com/uploads/${img}`}
+                src={`${SERVER_URL}/uploads/${img}`}
                 alt={`thumb-${index}`}
                 className="w-100 h-100"
                 style={{
@@ -102,9 +103,9 @@ export default function ProductDetails() {
 
         {/* BUTTONS */}
         <div className="d-flex gap-3">
-          <button className="btn btn-primary btn-lg">Add To Cart</button>
+          <button className="btn btn-primary">Add To Cart</button>
 
-          <button className="btn btn-outline-dark btn-lg">Buy Now</button>
+          <button className="btn btn-outline-primary">Buy Now</button>
         </div>
       </div>
     </div>

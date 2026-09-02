@@ -3,9 +3,12 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import axios from "axios";
-import DOMPurify from "dompurify";
 
 import { useAuth } from "../../../core/context/AuthContext";
+import { useLanguage } from "../../../core/context/LanguageContext";
+import { API_URL, SERVER_URL } from "../../../core/config/env";
+import { downloadDiscussionPdf } from "./downloadDiscussionPdf";
+import TranslatedContent from "../../../core/i18n/TranslatedContent";
 
 // ==========================================
 // DISCUSSION
@@ -29,6 +32,7 @@ interface Discussion {
   };
 
   image?: string;
+  video?: string;
   createdAt?: string;
 }
 
@@ -69,19 +73,6 @@ interface LoggedInUser {
   profileImage?: string;
 }
 
-// ==========================================
-// SERVER
-// ==========================================
-
-const SERVER_URL =
-  import.meta.env.VITE_SERVER_URL || "https://www.vaadsamvaad.com";
-
-const API_URL = `${SERVER_URL}/api`;
-
-// ==========================================
-// PROFILE IMAGE HELPER
-// ==========================================
-
 const getProfileImageUrl = (profileImage?: string | null) => {
   if (!profileImage || profileImage === "default-profile.png") {
     return `${SERVER_URL}/uploads/profiles/default-profile.png`;
@@ -117,6 +108,7 @@ const DiscussionDetails: React.FC = () => {
   // ==========================================
 
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   // ==========================================
   // LOGGED IN USER
@@ -177,6 +169,8 @@ const DiscussionDetails: React.FC = () => {
   const [commentError, setCommentError] = useState<string>("");
 
   const [sortComments, setSortComments] = useState<string>("Latest");
+
+  const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
 
   // ==========================================
   // GET DISCUSSION DETAILS
@@ -360,6 +354,31 @@ const DiscussionDetails: React.FC = () => {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!discussion || downloadingPdf) {
+      return;
+    }
+
+    try {
+      setDownloadingPdf(true);
+
+      await downloadDiscussionPdf({
+        title: discussion.title,
+        description: discussion.description,
+        categoryName: discussion.category?.name,
+        authorName:
+          discussion.createdBy?.name || discussion.createdBy?.email || t("user"),
+        createdAt: discussion.createdAt,
+        comments: sortedComments,
+      });
+    } catch (downloadError) {
+      console.error("Failed to download discussion PDF:", downloadError);
+      setError("Failed to download PDF. Please try again.");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   // ==========================================
   // SORT COMMENTS
   // ==========================================
@@ -405,7 +424,7 @@ const DiscussionDetails: React.FC = () => {
           <span className="visually-hidden">Loading...</span>
         </div>
 
-        <p className="text-muted mt-3">Loading discussion...</p>
+        <p className="text-muted mt-3">{t("loadingDiscussion")}</p>
       </div>
     );
   }
@@ -424,7 +443,7 @@ const DiscussionDetails: React.FC = () => {
           className="btn btn-primary"
           onClick={() => navigate("/discussion")}
         >
-          Back to Discussions
+          {t("browseDiscussions")}
         </button>
       </div>
     );
@@ -444,7 +463,7 @@ const DiscussionDetails: React.FC = () => {
           className="btn btn-primary mt-3"
           onClick={() => navigate("/discussion")}
         >
-          Back to Discussions
+          {t("browseDiscussions")}
         </button>
       </div>
     );
@@ -496,7 +515,7 @@ const DiscussionDetails: React.FC = () => {
             navigate("/discussion");
           }}
         >
-          Home
+          {t("home")}
         </a>
 
         <span className="mx-1 text-muted">&gt;</span>
@@ -509,12 +528,14 @@ const DiscussionDetails: React.FC = () => {
             navigate("/discussion");
           }}
         >
-          Discussions
+          {t("discussions")}
         </a>
 
         <span className="mx-1 text-muted">&gt;</span>
 
-        <span className="current">{discussion.title}</span>
+        <span className="current">
+          <TranslatedContent text={discussion.title} />
+        </span>
       </div>
 
       {/* ======================================
@@ -525,7 +546,11 @@ const DiscussionDetails: React.FC = () => {
         {/* CATEGORY */}
 
         <span className="badge-tech d-inline-block mb-3">
-          {discussion.category?.name || "General"}
+          {discussion.category?.name ? (
+            <TranslatedContent text={discussion.category.name} />
+          ) : (
+            t("general")
+          )}
         </span>
 
         {/* ====================================
@@ -542,14 +567,18 @@ const DiscussionDetails: React.FC = () => {
               }}
               onClick={() => navigate(`/discussion/edit/${discussion._id}`)}
             >
-              Edit
+              {t("edit")}
             </span>
           </>
         )}
 
         {/* TITLE */}
 
-        <h1 className="thread-title mb-3">{discussion.title}</h1>
+        <TranslatedContent
+          as="h1"
+          className="thread-title mb-3"
+          text={discussion.title}
+        />
 
         {/* ======================================
             AUTHOR + DATE + STATS
@@ -594,12 +623,24 @@ const DiscussionDetails: React.FC = () => {
             )}
           </div>
 
-          {/* STATS */}
+          {/* STATS + DOWNLOAD */}
 
-          <div className="d-flex gap-3">
+          <div className="d-flex flex-wrap align-items-center gap-3">
             <span className="stat-pill">
-              <i className="bi bi-chat"></i> {comments.length} Comments
+              <i className="bi bi-chat"></i> {t("commentsCount", { count: comments.length })}
             </span>
+
+            <a
+              href="#"
+              className="btn btn-outline-primary"
+              onClick={(event) => {
+                event.preventDefault();
+                handleDownloadPdf();
+              }}
+            >
+              <i className="bi bi-download me-1"></i>
+              {downloadingPdf ? t("preparingPdf") : t("downloadPdf")}
+            </a>
           </div>
         </div>
 
@@ -607,21 +648,38 @@ const DiscussionDetails: React.FC = () => {
             DESCRIPTION
         ====================================== */}
 
-        <div
+        <TranslatedContent
+          as="div"
           className="mb-3 discussion-description"
+          html
+          text={discussion.description}
           style={{
             color: "#374151",
-
             fontSize: ".95rem",
-          }}
-          dangerouslySetInnerHTML={{
-            __html: DOMPurify.sanitize(discussion.description),
           }}
         />
 
         {/* ======================================
-            DISCUSSION IMAGE
+            DISCUSSION MEDIA
         ====================================== */}
+
+        {discussion.video && (
+          <div className="mb-3">
+            <video
+              src={`${SERVER_URL}${discussion.video}`}
+              controls
+              preload="metadata"
+              style={{
+                width: "100%",
+                maxHeight: "450px",
+                borderRadius: "10px",
+                background: "#000",
+              }}
+            >
+              {t("videoNotSupported")}
+            </video>
+          </div>
+        )}
 
         {discussion.image ? (
           <div className="hero-banner mb-1">
@@ -639,13 +697,13 @@ const DiscussionDetails: React.FC = () => {
               }}
             />
           </div>
-        ) : (
+        ) : !discussion.video ? (
           <div className="hero-banner mb-1">
             <div className="glyph">
               <i className="bi bi-chat-square-text"></i>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* ======================================
@@ -654,19 +712,21 @@ const DiscussionDetails: React.FC = () => {
 
       <div>
         <div className="d-flex align-items-center justify-content-between mb-3">
-          <span className="opinions-count">Comments ({comments.length})</span>
+          <span className="opinions-count">
+            {t("commentsCount", { count: comments.length })}
+          </span>
 
           <div className="d-flex align-items-center gap-1">
-            <span className="text-muted small">Sort by:</span>
+            <span className="text-muted small">{t("sortBy")}</span>
 
             <select
               className="sort-select"
               value={sortComments}
               onChange={(e) => setSortComments(e.target.value)}
             >
-              <option value="Latest">Latest</option>
+              <option value="Latest">{t("latest")}</option>
 
-              <option value="Oldest">Oldest</option>
+              <option value="Oldest">{t("oldest")}</option>
             </select>
           </div>
         </div>
@@ -688,14 +748,14 @@ const DiscussionDetails: React.FC = () => {
               role="status"
             ></div>
 
-            <span className="ms-2 text-muted">Loading comments...</span>
+            <span className="ms-2 text-muted">{t("loadingComments")}</span>
           </div>
         ) : sortedComments.length === 0 ? (
-          <div className="text-muted py-4 text-center">No comments yet.</div>
+          <div className="text-muted py-4 text-center">{t("noComments")}</div>
         ) : (
           sortedComments.map((comment) => {
             const commentUserName =
-              comment.createdBy?.name || comment.createdBy?.email || "User";
+              comment.createdBy?.name || comment.createdBy?.email || t("user");
 
             // ==================================
             // COMMENT USER PROFILE IMAGE
@@ -730,7 +790,9 @@ const DiscussionDetails: React.FC = () => {
 
                 {/* COMMENT */}
 
-                <p className="opinion-body mb-1">{comment.comment}</p>
+                <p className="opinion-body mb-1">
+                  <TranslatedContent text={comment.comment} />
+                </p>
               </div>
             );
           })
@@ -752,7 +814,7 @@ const DiscussionDetails: React.FC = () => {
             <input
               type="text"
               className="form-control"
-              placeholder="Write a comment..."
+              placeholder={t("writeComment")}
               value={commentText}
               onChange={(e) => {
                 setCommentText(e.target.value);
@@ -771,17 +833,16 @@ const DiscussionDetails: React.FC = () => {
               onClick={handlePostComment}
               disabled={commentLoading || !commentText.trim()}
             >
-              {commentLoading ? "Posting..." : "Comment"}
+              {commentLoading ? t("posting") : t("comment")}
             </button>
           </div>
         ) : (
           <div className="alert alert-light border mt-4 text-center">
             <i className="bi bi-lock-fill me-2"></i>
-            Please{" "}
+            {t("pleaseLoginToComment")}{" "}
             <Link to="/login" className="fw-semibold">
-              login
-            </Link>{" "}
-            to write a comment.
+              {t("login")}
+            </Link>
           </div>
         )}
       </div>

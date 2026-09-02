@@ -1,5 +1,6 @@
 const Discussion = require("../models/Discussion");
 const Category = require("../models/Category");
+const Comment = require("../models/Comment");
 
 // ==========================================
 // CREATE DISCUSSION
@@ -77,6 +78,10 @@ const startDiscussion = async (req, res) => {
 // GET ALL DISCUSSIONS
 // GET /api/discussions
 // ==========================================
+// ==========================================
+// GET ALL DISCUSSIONS
+// GET /api/discussions
+// ==========================================
 const getDiscussions = async (req, res) => {
   try {
     const discussions = await Discussion.find()
@@ -87,15 +92,44 @@ const getDiscussions = async (req, res) => {
       )
       .sort({
         createdAt: -1,
-      });
+      })
+      .lean();
+
+    const discussionsWithCommentCount =
+      await Promise.all(
+        discussions.map(async (discussion) => {
+
+          const commentCount =
+            await Comment.countDocuments({
+              discussion: discussion._id,
+              status: "active",
+            });
+
+          console.log(
+            "Discussion:",
+            discussion._id,
+            "Comment count:",
+            commentCount,
+          );
+
+          return {
+            ...discussion,
+            commentCount,
+          };
+        }),
+      );
 
     return res.status(200).json({
       success: true,
-      count: discussions.length,
-      data: discussions,
+      count: discussionsWithCommentCount.length,
+      data: discussionsWithCommentCount,
     });
+
   } catch (error) {
-    console.error("Get discussions error:", error);
+    console.error(
+      "Get discussions error:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,

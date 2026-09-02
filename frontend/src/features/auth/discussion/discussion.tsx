@@ -36,6 +36,7 @@ interface DiscussionItem {
 
   image?: string;
   createdAt?: string;
+  commentCount?: number;
 }
 
 // ==========================================
@@ -435,7 +436,8 @@ const Discussion: React.FC = () => {
                           {/* COMMENTS */}
 
                           <span className="stat">
-                            <i className="bi bi-chat-square-text"></i>
+                            <i className="bi bi-chat-square-text me-1"></i>
+                            {discussion.commentCount ?? 0}
                           </span>
 
                           {/* BOOKMARK */}

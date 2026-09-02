@@ -51,7 +51,8 @@ const MainLayout: FC = () => {
   // SERVER URL
   // ==========================================
 
-  const SERVER_URL = import.meta.env.VITE_SERVER_URL || "https://www.vaadsamvaad.com";
+  const SERVER_URL =
+    import.meta.env.VITE_SERVER_URL || "https://www.vaadsamvaad.com";
 
   // ==========================================
   // PROFILE IMAGE URL
@@ -117,7 +118,7 @@ const MainLayout: FC = () => {
   const handleLogout = () => {
     logout();
 
-    navigate("/discussion", {
+    navigate("/login", {
       replace: true,
     });
   };

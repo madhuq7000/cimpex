@@ -7,7 +7,7 @@ import {
   type TranslationKey,
 } from "../i18n/translations";
 
-const LANGUAGE_STORAGE_KEY = "vaadsamvaad-language";
+const LANGUAGE_STORAGE_KEY = "amarsavimarsa-language";
 
 type TranslateVars = Record<string, string | number>;
 

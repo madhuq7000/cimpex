@@ -13,7 +13,7 @@ const getServerUrl = () => {
     return window.location.origin.replace(/\/+$/, "");
   }
 
-  return "https://www.vaadsamvaad.com";
+  return "https://www.amarsavimarsa.com";
 };
 
 export const SERVER_URL = getServerUrl();

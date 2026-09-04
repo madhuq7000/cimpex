@@ -103,7 +103,7 @@ export const downloadDiscussionPdf = async (data: DiscussionPdfData) => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     doc.setTextColor(11, 71, 46);
-    doc.text("VaadSamvaad", margin + logoWidth + 4, y + 2);
+    doc.text("Amarsa Vimarsa", margin + logoWidth + 4, y + 2);
 
     y += logoHeight + 4;
   } catch (error) {
@@ -112,7 +112,7 @@ export const downloadDiscussionPdf = async (data: DiscussionPdfData) => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     doc.setTextColor(11, 71, 46);
-    doc.text("VaadSamvaad", margin, y);
+    doc.text("Amarsa Vimarsa", margin, y);
 
     y += 8;
   }

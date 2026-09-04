@@ -20,8 +20,8 @@ const app = express();
 const defaultOrigins = [
   "http://localhost:5173",
   "http://localhost:4173",
-  "https://www.vaadsamvaad.com",
-  "https://vaadsamvaad.com",
+    "https://www.amarsavimarsa.com",
+    "https://amarsavimarsa.com",
 ];
 
 const extraOrigins = String(process.env.CLIENT_URL || "")
@@ -84,7 +84,7 @@ app.use("/api/comments", commentRoutes);
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "VaadSamvaad API is running",
+    message: "Amarsa Vimarsa API is running",
   });
 });
 

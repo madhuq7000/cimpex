@@ -59,12 +59,12 @@ export default function Login() {
         <div className="col-lg-6 left-side">
           <div className="brand-mark">
             <span>
-              <img src={logoImage} className="logo" alt="VaadSamvaad Logo" />
+              <img src={logoImage} className="logo" alt="Amarsa Vimarsa Logo" />
             </span>
 
             <span>
-              <span className="vaad">Vaad</span>
-              <span className="samvaad">Samvaad</span>
+              <span className="vaad">Amarsa</span>
+              <span className="samvaad"> Vimarsa</span>
             </span>
           </div>
 
@@ -136,7 +136,7 @@ export default function Login() {
         {/* Right: Login form */}
         <div className="col-lg-6 right-side">
           <h2 className="login-title">
-            {t("loginToVaad")} <span className="accent">VaadSamvaad</span>
+            {t("loginToVaad")} <span className="accent">Amarsa Vimarsa</span>
           </h2>
 
           <p className="login-sub">{t("welcomeEnterDetails")}</p>

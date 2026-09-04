@@ -220,9 +220,9 @@ const MainLayout: FC = () => {
             to="/discussion"
             className="d-flex align-items-center gap-2 text-decoration-none"
           >
-            <img src={logoImage} className="headerLogo" alt="VaadSamvaad" />
+            <img src={logoImage} className="headerLogo" alt="Amarsa Vimarsa" />
 
-            <span className="brand-name">VaadSamvaad</span>
+            <span className="brand-name">Amarsa Vimarsa</span>
           </Link>
         </div>
 
@@ -415,11 +415,8 @@ const MainLayout: FC = () => {
           >
             <div className="offcanvas-header">
               <span className="d-flex align-items-center gap-2">
-                <span className="brand-mark">
-                  <i className="bi bi-chat-dots-fill"></i>
-                </span>
-
-                <span className="brand-name">VaadSamvaad</span>
+                <img src={logoImage} className="headerLogo" alt="Amarsa Vimarsa" />
+                <span className="brand-name">Amarsa Vimarsa</span>
               </span>
 
               <button

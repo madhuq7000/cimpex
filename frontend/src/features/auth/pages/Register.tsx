@@ -201,12 +201,12 @@ export default function Register() {
         <div className="col-lg-6 left-side">
           <div className="brand-mark">
             <span>
-              <img src={logoImage} className="logo" alt="VaadSamvaad" />
+              <img src={logoImage} className="logo" alt="Amarsa Vimarsa" />
             </span>
 
             <span>
-              <span className="vaad">Vaad</span>
-              <span className="samvaad">Samvaad</span>
+              <span className="vaad">Amarsa</span>
+              <span className="samvaad"> Vimarsa</span>
             </span>
           </div>
 

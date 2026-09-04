@@ -105,9 +105,10 @@ a {
 }
 
 .brand-mark .logo {
-  width: 51px;
-  height: auto;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
+  display: block;
 }
 
 .brand-mark .bubble {

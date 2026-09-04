@@ -41,4 +41,4 @@ https://github.com/madhuq7000/vaadsamvaad.git
 git remote add origin https://github.com/madhuq7000/vaadsamvaad.git
 
 
-https://www.vaadsamvaad.com
+https://www.amarsavimarsa.com

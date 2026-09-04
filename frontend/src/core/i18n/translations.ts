@@ -18,10 +18,10 @@ export const translations = {
     faq: "FAQ",
     communityGuidelines: "Community Guidelines",
     faqIntro:
-      "Find quick answers about using VaadSamvaad, starting discussions, and joining the community.",
-    faqQ1: "What is VaadSamvaad?",
+      "Find quick answers about using Amarsa Vimarsa, starting discussions, and joining the community.",
+    faqQ1: "What is Amarsa Vimarsa?",
     faqA1:
-      "VaadSamvaad is a community forum where people start discussions, share opinions, and learn from one another in a respectful space.",
+      "Amarsa Vimarsa is a community forum where people start discussions, share opinions, and learn from one another in a respectful space.",
     faqQ2: "How do I start a discussion?",
     faqA2:
       "Log in, then use Start Discussion. Add a title, category, and description. You can also import a PDF or Word file to fill the form, and optionally attach an image or video.",
@@ -41,7 +41,7 @@ export const translations = {
     faqA7:
       "Logged-in members can add categories from Add Category. Use clear names so others can find the right topic easily.",
     guidelinesIntro:
-      "These rules keep VaadSamvaad safe, useful, and respectful for everyone. By using the site, you agree to follow them.",
+      "These rules keep Amarsa Vimarsa safe, useful, and respectful for everyone. By using the site, you agree to follow them.",
     guideT1: "Be respectful",
     guideB1:
       "Treat every member with courtesy. Disagree with ideas, not with personal attacks, insults, or mockery.",
@@ -69,7 +69,7 @@ export const translations = {
     startDiscussion: "Start Discussion",
     loginToStartDiscussion: "Login to Start Discussion",
     close: "Close",
-    whyJoin: "Why Join VaadSamvaad?",
+    whyJoin: "Why Join Amarsa Vimarsa?",
     meaningfulDiscussions: "Meaningful Discussions",
     meaningfulDiscussionsDesc:
       "Engage in conversations that matter and make an impact.",
@@ -171,7 +171,7 @@ export const translations = {
     createYour: "Create Your",
     account: "Account",
     signUpSub:
-      "Sign up to VaadSamvaad and be a part of meaningful discussions.",
+      "Sign up to Amarsa Vimarsa and be a part of meaningful discussions.",
     profileImage: "Profile Image",
     fullName: "Full Name",
     enterFullName: "Enter your full name",
@@ -207,10 +207,10 @@ export const translations = {
     faq: "सामान्य प्रश्न",
     communityGuidelines: "समुदाय दिशानिर्देश",
     faqIntro:
-      "VaadSamvaad का उपयोग, चर्चा शुरू करने और समुदाय से जुड़ने के बारे में त्वरित उत्तर यहाँ मिलेंगे।",
-    faqQ1: "VaadSamvaad क्या है?",
+      "Amarsa Vimarsa का उपयोग, चर्चा शुरू करने और समुदाय से जुड़ने के बारे में त्वरित उत्तर यहाँ मिलेंगे।",
+    faqQ1: "Amarsa Vimarsa क्या है?",
     faqA1:
-      "VaadSamvaad एक सामुदायिक मंच है जहाँ लोग चर्चा शुरू करते हैं, विचार साझा करते हैं और सम्मान के साथ एक-दूसरे से सीखते हैं।",
+      "Amarsa Vimarsa एक सामुदायिक मंच है जहाँ लोग चर्चा शुरू करते हैं, विचार साझा करते हैं और सम्मान के साथ एक-दूसरे से सीखते हैं।",
     faqQ2: "मैं चर्चा कैसे शुरू करूँ?",
     faqA2:
       "लॉगिन करें, फिर चर्चा शुरू करें पर जाएँ। शीर्षक, श्रेणी और विवरण जोड़ें। फॉर्म भरने के लिए PDF या Word फ़ाइल भी आयात कर सकते हैं, और वैकल्पिक रूप से छवि या वीडियो जोड़ सकते हैं।",
@@ -230,7 +230,7 @@ export const translations = {
     faqA7:
       "लॉगिन किए सदस्य श्रेणी जोड़ें से श्रेणी बना सकते हैं। साफ़ नाम रखें ताकि दूसरों को विषय आसानी से मिले।",
     guidelinesIntro:
-      "ये नियम VaadSamvaad को सभी के लिए सुरक्षित, उपयोगी और सम्मानजनक रखते हैं। साइट का उपयोग करके आप इनसे सहमत होते हैं।",
+      "ये नियम Amarsa Vimarsa को सभी के लिए सुरक्षित, उपयोगी और सम्मानजनक रखते हैं। साइट का उपयोग करके आप इनसे सहमत होते हैं।",
     guideT1: "सम्मान रखें",
     guideB1:
       "हर सदस्य के साथ विनम्रता से पेश आएँ। विचारों से असहमति हो सकती है, व्यक्तिगत हमला, अपमान या मज़ाक नहीं।",
@@ -258,7 +258,7 @@ export const translations = {
     startDiscussion: "चर्चा शुरू करें",
     loginToStartDiscussion: "चर्चा शुरू करने के लिए लॉगिन करें",
     close: "बंद करें",
-    whyJoin: "VaadSamvaad से क्यों जुड़ें?",
+    whyJoin: "Amarsa Vimarsa से क्यों जुड़ें?",
     meaningfulDiscussions: "सार्थक चर्चाएँ",
     meaningfulDiscussionsDesc:
       "ऐसी बातचीत में शामिल हों जो मायने रखती है और प्रभाव डालती है।",
@@ -359,7 +359,7 @@ export const translations = {
       "खाता बनाएँ और समुदाय के साथ अपने विचार साझा करना शुरू करें।",
     createYour: "अपना",
     account: "खाता बनाएँ",
-    signUpSub: "VaadSamvaad पर साइन अप करें और सार्थक चर्चाओं का हिस्सा बनें।",
+    signUpSub: "Amarsa Vimarsa पर साइन अप करें और सार्थक चर्चाओं का हिस्सा बनें।",
     profileImage: "प्रोफ़ाइल छवि",
     fullName: "पूरा नाम",
     enterFullName: "अपना पूरा नाम दर्ज करें",

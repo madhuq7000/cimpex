@@ -102,7 +102,7 @@ export const downloadDiscussionPdf = async (data: DiscussionPdfData) => {
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.setTextColor(11, 71, 46);
+    doc.setTextColor(79, 70, 229);
     doc.text("Amarsa Vimarsa", margin + logoWidth + 4, y + 2);
 
     y += logoHeight + 4;
@@ -111,13 +111,13 @@ export const downloadDiscussionPdf = async (data: DiscussionPdfData) => {
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.setTextColor(11, 71, 46);
+    doc.setTextColor(79, 70, 229);
     doc.text("Amarsa Vimarsa", margin, y);
 
     y += 8;
   }
 
-  doc.setDrawColor(11, 71, 46);
+  doc.setDrawColor(79, 70, 229);
   doc.setLineWidth(0.4);
   doc.line(margin, y, pageWidth - margin, y);
   y += 10;
@@ -216,4 +216,26 @@ export const downloadDiscussionPdf = async (data: DiscussionPdfData) => {
   }
 
   doc.save(toFileName(data.title));
+};
+
+export const downloadOriginalDocument = async (
+  fileUrl: string,
+  fileName: string,
+) => {
+  const response = await fetch(fileUrl);
+
+  if (!response.ok) {
+    throw new Error("Failed to download document");
+  }
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = window.document.createElement("a");
+
+  link.href = objectUrl;
+  link.download = fileName || "document";
+  window.document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
 };

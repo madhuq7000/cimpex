@@ -19,6 +19,15 @@ const videoMimeTypes = [
   "video/quicktime",
 ];
 
+const documentMimeTypes = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/octet-stream",
+];
+
+const documentExtensions = [".pdf", ".doc", ".docx"];
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadPath);
@@ -43,12 +52,24 @@ const fileFilter = (req, file, cb) => {
     return;
   }
 
+  if (file.fieldname === "document") {
+    const extension = path.extname(file.originalname || "").toLowerCase();
+
+    if (documentExtensions.includes(extension)) {
+      cb(null, true);
+      return;
+    }
+
+    cb(new Error("Only PDF, DOC and DOCX files are allowed"));
+    return;
+  }
+
   if (imageMimeTypes.includes(file.mimetype)) {
     cb(null, true);
     return;
   }
 
-  cb(new Error("Only JPG, PNG, WEBP, GIF images or MP4, WEBM, OGG videos are allowed"));
+  cb(new Error("Only JPG, PNG, WEBP, GIF images, videos, or PDF/DOC files are allowed"));
 };
 
 const uploadDiscussion = multer({
@@ -56,6 +77,7 @@ const uploadDiscussion = multer({
   fileFilter,
   limits: {
     fileSize: 50 * 1024 * 1024,
+    fieldSize: 20 * 1024 * 1024,
   },
 });
 
@@ -63,6 +85,7 @@ const handleDiscussionMediaUpload = (req, res, next) => {
   uploadDiscussion.fields([
     { name: "image", maxCount: 1 },
     { name: "video", maxCount: 1 },
+    { name: "document", maxCount: 1 },
   ])(req, res, (error) => {
     if (!error) {
       next();
@@ -74,6 +97,13 @@ const handleDiscussionMediaUpload = (req, res, next) => {
         return res.status(400).json({
           success: false,
           message: "File size must be less than 50MB",
+        });
+      }
+
+      if (error.code === "LIMIT_FIELD_VALUE") {
+        return res.status(400).json({
+          success: false,
+          message: "Discussion content is too large. Please shorten the description.",
         });
       }
 

@@ -5,6 +5,8 @@ import { registerApi } from "../authApi";
 import type { RegisterPayload } from "../types";
 import { useLanguage } from "../../../core/context/LanguageContext";
 import LanguageSwitcher from "../../../sharedComponent/LanguageSwitcher";
+import SocialLoginButtons from "../../../sharedComponent/SocialLoginButtons";
+import WhyJoinFeatures from "../../../sharedComponent/WhyJoinFeatures";
 
 import registerImage from "../../../assets/images/register.png";
 import logoImage from "../../../assets/images/logo.png";
@@ -200,14 +202,13 @@ export default function Register() {
 
         <div className="col-lg-6 left-side">
           <div className="brand-mark">
-            <span>
+            <Link to="/discussion" className="brand-mark-link">
               <img src={logoImage} className="logo" alt="Amarsa Vimarsa" />
-            </span>
-
-            <span>
-              <span className="vaad">Amarsa</span>
-              <span className="samvaad"> Vimarsa</span>
-            </span>
+              <span>
+                <span className="vaad">Amarsa</span>
+                <span className="samvaad"> Vimarsa</span>
+              </span>
+            </Link>
           </div>
 
           <h1 className="hero-title">
@@ -218,64 +219,6 @@ export default function Register() {
 
           <div className="illustration-wrap">
             <img src={registerImage} alt="Register" />
-          </div>
-
-          <div className="feature-list">
-            <div className="feature-item">
-              <span className="feature-icon">
-                <i className="bi bi-chat-dots"></i>
-              </span>
-
-              <div>
-                <div className="feature-title">{t("meaningfulDiscussions")}</div>
-
-                <div className="feature-desc">
-                  {t("meaningfulDiscussionsDesc")}
-                </div>
-              </div>
-            </div>
-
-            <div className="feature-item">
-              <span className="feature-icon">
-                <i className="bi bi-megaphone"></i>
-              </span>
-
-              <div>
-                <div className="feature-title">{t("shareYourViews")}</div>
-
-                <div className="feature-desc">
-                  {t("shareYourViewsDesc")}
-                </div>
-              </div>
-            </div>
-
-            <div className="feature-item">
-              <span className="feature-icon">
-                <i className="bi bi-people"></i>
-              </span>
-
-              <div>
-                <div className="feature-title">{t("buildCommunity")}</div>
-
-                <div className="feature-desc">
-                  {t("buildCommunityDesc")}
-                </div>
-              </div>
-            </div>
-
-            <div className="feature-item">
-              <span className="feature-icon">
-                <i className="bi bi-shield-check"></i>
-              </span>
-
-              <div>
-                <div className="feature-title">{t("safeRespectful")}</div>
-
-                <div className="feature-desc">
-                  {t("safeRespectfulDesc")}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -308,7 +251,7 @@ export default function Register() {
                       height: "100px",
                       borderRadius: "50%",
                       objectFit: "cover",
-                      border: "3px solid #0d4930",
+                      border: "3px solid #2e3094",
                     }}
                   />
                 ) : (
@@ -552,6 +495,8 @@ export default function Register() {
               )}
             </button>
           </form>
+
+          <SocialLoginButtons />
 
           {/* ==========================================
     TERMS & CONDITIONS MODAL
@@ -1088,6 +1033,7 @@ export default function Register() {
           </p>
         </div>
       </div>
+      <WhyJoinFeatures />
     </div>
   );
 }

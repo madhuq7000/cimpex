@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FC, FormEvent } from "react";
 
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -12,8 +12,12 @@ import logoImage from "../assets/images/logo.png";
 
 import { useAuth } from "../core/context/AuthContext";
 import { useLanguage } from "../core/context/LanguageContext";
-import { SERVER_URL } from "../core/config/env";
+import {
+  getProfileImageUrl as resolveProfileImageUrl,
+  handleProfileImageError,
+} from "../core/utils/profileImage";
 import LanguageSwitcher from "../sharedComponent/LanguageSwitcher";
+import WhyJoinFeatures from "../sharedComponent/WhyJoinFeatures";
 
 // ==========================================
 // LOGGED IN USER TYPE
@@ -58,48 +62,7 @@ const MainLayout: FC = () => {
   // PROFILE IMAGE URL
   // ==========================================
 
-  const getProfileImageUrl = () => {
-    const profileImage = loggedInUser?.profileImage;
-
-    if (!profileImage) {
-      return `${SERVER_URL}/uploads/profiles/default-profile.png`;
-    }
-
-    // Complete URL already returned by backend
-    if (
-      profileImage.startsWith("http://") ||
-      profileImage.startsWith("https://")
-    ) {
-      return profileImage;
-    }
-
-    // Backend returned:
-    // /uploads/profiles/image.jpg
-    if (profileImage.startsWith("/uploads/")) {
-      return `${SERVER_URL}${profileImage}`;
-    }
-
-    // Backend returned only:
-    // image.jpg
-    return `${SERVER_URL}/uploads/profiles/${profileImage}`;
-  };
-
-  const profileImageUrl = getProfileImageUrl();
-
-  // ==========================================
-  // PROFILE IMAGE ERROR
-  // ==========================================
-
-  const handleProfileImageError = (
-    e: React.SyntheticEvent<HTMLImageElement>,
-  ) => {
-    const defaultImage = `${SERVER_URL}/uploads/profiles/default-profile.png`;
-
-    // Prevent infinite error loop
-    if (e.currentTarget.src !== defaultImage) {
-      e.currentTarget.src = defaultImage;
-    }
-  };
+  const profileImageUrl = resolveProfileImageUrl(loggedInUser?.profileImage);
 
   // ==========================================
   // STATES
@@ -108,6 +71,8 @@ const MainLayout: FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
 
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [, setSelectedCategory] = useState("All");
 
@@ -148,6 +113,7 @@ const MainLayout: FC = () => {
 
     if (query !== null) {
       setSearchKeyword(query);
+      setMobileSearchOpen(true);
     }
   }, [searchParams]);
 
@@ -168,7 +134,11 @@ const MainLayout: FC = () => {
           location.pathname.startsWith("/discussion/") ||
           location.pathname === "/discussion"
             ? "/discussion"
-            : location.pathname,
+            : location.pathname.startsWith("/competitions/") ||
+                location.pathname === "/competitions" ||
+                location.pathname === "/start-competition"
+              ? "/competitions"
+              : location.pathname,
         search: nextSearch ? `?${nextSearch}` : "",
       },
       { replace: true },
@@ -189,182 +159,182 @@ const MainLayout: FC = () => {
     const keyword = searchKeyword.trim();
 
     if (keyword) {
-      navigate(`/discussion?q=${encodeURIComponent(keyword)}`);
+      const searchPath =
+        location.pathname.startsWith("/competitions") ||
+        location.pathname === "/start-competition"
+          ? "/competitions"
+          : "/discussion";
+
+      navigate(`${searchPath}?q=${encodeURIComponent(keyword)}`);
       return;
     }
 
     clearSearch();
   };
 
+  useEffect(() => {
+    if (!mobileSearchOpen) {
+      return;
+    }
+
+    searchInputRef.current?.focus();
+  }, [mobileSearchOpen]);
+
   return (
     <>
       {/* ================= HEADER ================= */}
 
-      <header className="topbar d-flex align-items-center justify-content-between gap-3">
-        <div className="d-flex align-items-center gap-3">
-          {/* MOBILE MENU */}
-
-          <button
-            className="btn mobile-toggle p-2"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#sidebarOffcanvas"
-            aria-label="Open menu"
-          >
-            <i className="bi bi-list fs-4"></i>
-          </button>
-
-          {/* LOGO */}
-
-          <Link
-            to="/discussion"
-            className="d-flex align-items-center gap-2 text-decoration-none"
-          >
-            <img src={logoImage} className="headerLogo" alt="Amarsa Vimarsa" />
-
-            <span className="brand-name">Amarsa Vimarsa</span>
-          </Link>
-        </div>
-
-        {/* ================= SEARCH ================= */}
-
-        <form
-          className="search-box flex-grow-1 mx-3"
-          onSubmit={handleSearchSubmit}
-          role="search"
-        >
-          <i className="bi bi-search"></i>
-
-          <input
-            type="search"
-            className="form-control"
-            placeholder={t("searchDiscussions")}
-            value={searchKeyword}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            aria-label={t("searchDiscussions")}
-          />
-
-          {searchKeyword && (
-            <button
-              type="button"
-              className="search-clear"
-              aria-label={t("clearSearch")}
-              onClick={clearSearch}
+      <div className="page-frame">
+      <header className="topbar">
+        <div className="row g-0 align-items-center topbar-row">
+          <div className="col-12 col-lg-3 col-xl-3 topbar-brand-col">
+            <Link
+              to="/discussion"
+              className="topbar-brand d-flex align-items-center gap-2 text-decoration-none"
             >
-              <i className="bi bi-x-lg"></i>
+              <img src={logoImage} className="headerLogo" alt="Amarsa Vimarsa" />
+              <span className="brand-name">Amarsa Vimarsa</span>
+            </Link>
+          </div>
+
+          <div className="col-12 col-lg-9 col-xl-9 topbar-main">
+            <button
+              className="btn mobile-toggle p-2"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#sidebarOffcanvas"
+              aria-label="Open menu"
+            >
+              <i className="bi bi-list fs-4"></i>
             </button>
-          )}
-        </form>
 
-        {/* ================= USER / GUEST ================= */}
+            <button
+              className="search-toggle"
+              type="button"
+              aria-label={t("searchDiscussions")}
+              onClick={() => setMobileSearchOpen(true)}
+            >
+              <i className="bi bi-search fs-5"></i>
+            </button>
 
-        <div className="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
-          <LanguageSwitcher />
-
-          {isAuthenticated ? (
-            <div className="dropdown">
-              <a
-                className="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle"
-                href="#"
-                role="button"
-                data-bs-toggle="dropdown"
-                onClick={(e) => e.preventDefault()}
+            <form
+              className={`search-box${mobileSearchOpen ? " is-open" : ""}`}
+              onSubmit={handleSearchSubmit}
+              role="search"
+            >
+              <button
+                type="button"
+                className="search-collapse"
+                aria-label={t("close")}
+                onClick={() => setMobileSearchOpen(false)}
               >
-                <span className="user-chip d-flex align-items-center gap-2">
-                  <img
-                    src={profileImageUrl}
-                    alt={loggedInUser?.name || t("user")}
-                    onError={handleProfileImageError}
-                  />
+                <i className="bi bi-arrow-left"></i>
+              </button>
 
-                  <span>{loggedInUser?.name || t("user")}</span>
-                </span>
-              </a>
+              <div className="search-box-field">
+                <i className="bi bi-search"></i>
 
-              <ul className="dropdown-menu dropdown-menu-end">
-                <li>
-                  <div className="px-3 py-2">
-                    <div className="fw-semibold">
-                      {loggedInUser?.name || t("user")}
-                    </div>
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  className="form-control"
+                  placeholder={t("searchDiscussions")}
+                  value={searchKeyword}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  aria-label={t("searchDiscussions")}
+                />
 
-                    {loggedInUser?.email && (
-                      <small className="text-muted">{loggedInUser.email}</small>
-                    )}
-                  </div>
-                </li>
-
-                <li>
-                  <hr className="dropdown-divider" />
-                </li>
-
-                <li>
+                {searchKeyword && (
                   <button
                     type="button"
-                    className="dropdown-item text-danger logout"
-                    onClick={handleLogout}
+                    className="search-clear"
+                    aria-label={t("clearSearch")}
+                    onClick={clearSearch}
                   >
-                    <i className="bi bi-box-arrow-right me-2"></i>
-                    {t("logOut")}
+                    <i className="bi bi-x-lg"></i>
                   </button>
-                </li>
-              </ul>
-            </div>
-          ) : (
-            <div className="d-flex align-items-center gap-2">
-              <Link to="/login" className="btn btn-outline-primary">
-                {t("login")}
-              </Link>
+                )}
+              </div>
+            </form>
 
-              <Link to="/register" className="btn btn-primary">
-                {t("register")}
-              </Link>
+            <div className="topbar-actions">
+              <LanguageSwitcher />
+
+              {isAuthenticated ? (
+                <div className="dropdown">
+                  <a
+                    className="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle"
+                    href="#"
+                    role="button"
+                    data-bs-toggle="dropdown"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <span className="user-chip d-flex align-items-center gap-2">
+                      <img
+                        src={profileImageUrl}
+                        alt={loggedInUser?.name || t("user")}
+                        onError={handleProfileImageError}
+                      />
+
+                      <span>{loggedInUser?.name || t("user")}</span>
+                    </span>
+                  </a>
+
+                  <ul className="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <div className="px-3 py-2">
+                        <div className="fw-semibold">
+                          {loggedInUser?.name || t("user")}
+                        </div>
+
+                        {loggedInUser?.email && (
+                          <small className="text-muted">{loggedInUser.email}</small>
+                        )}
+                      </div>
+                    </li>
+
+                    <li>
+                      <hr className="dropdown-divider" />
+                    </li>
+
+                    <li>
+                      <button
+                        type="button"
+                        className="dropdown-item text-danger logout"
+                        onClick={handleLogout}
+                      >
+                        <i className="bi bi-box-arrow-right me-2"></i>
+                        {t("logOut")}
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              ) : (
+                <div className="topbar-auth">
+                  <Link to="/login" className="btn btn-outline-primary">
+                    {t("login")}
+                  </Link>
+
+                  <Link to="/register" className="btn btn-primary">
+                    {t("register")}
+                  </Link>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </header>
 
       {/* ================= MAIN ================= */}
 
-      <div className="container-fluid">
-        <div className="row">
+      <div className="row g-0 page-body">
           {/* ================= DESKTOP SIDEBAR ================= */}
 
-          <aside className="col-lg-3 col-xl-2 px-0 sidebar-col">
+          <aside className="col-lg-3 col-xl-3 px-0 sidebar-col">
             <div className="sidebar">
               <SidebarNav />
 
-              {/* ================= START DISCUSSION ================= */}
-
-              {isAuthenticated ? (
-                <Link
-                  to="/start-discussion"
-                  className="start-btn d-flex align-items-center justify-content-center gap-2"
-                  style={{
-                    color: "#fff",
-                    textDecoration: "none",
-                  }}
-                >
-                  <i className="bi bi-plus-lg"></i>
-                  {t("startDiscussion")}
-                </Link>
-              ) : (
-                <Link
-                  to="/login"
-                  className="start-btn d-flex align-items-center justify-content-center gap-2"
-                  style={{
-                    color: "#fff",
-                    textDecoration: "none",
-                  }}
-                >
-                  <i className="bi bi-box-arrow-in-right"></i>
-                  {t("loginToStartDiscussion")}
-                </Link>
-              )}
-
-              {/* ================= PROFILE / GUEST ================= */}
-
-              {isAuthenticated ? (
+              {isAuthenticated && (
                 <div className="mt-auto sidebar-profile">
                   <div className="sidebar-profile-user">
                     <img
@@ -388,141 +358,14 @@ const MainLayout: FC = () => {
                     {t("logOut")}
                   </button>
                 </div>
-              ) : (
-                <div className="mt-auto p-3">
-                  <div className="d-grid gap-2">
-                    <Link to="/login" className="btn btn-outline-primary">
-                      <i className="bi bi-box-arrow-in-right me-2"></i>
-                      {t("login")}
-                    </Link>
-
-                    <Link to="/register" className="btn btn-primary">
-                      <i className="bi bi-person-plus me-2"></i>
-                      {t("register")}
-                    </Link>
-                  </div>
-                </div>
               )}
             </div>
           </aside>
 
-          {/* ================= MOBILE SIDEBAR ================= */}
-
-          <div
-            className="offcanvas offcanvas-start"
-            tabIndex={-1}
-            id="sidebarOffcanvas"
-          >
-            <div className="offcanvas-header">
-              <span className="d-flex align-items-center gap-2">
-                <img src={logoImage} className="headerLogo" alt="Amarsa Vimarsa" />
-                <span className="brand-name">Amarsa Vimarsa</span>
-              </span>
-
-              <button
-                type="button"
-                className="btn-close"
-                data-bs-dismiss="offcanvas"
-                aria-label={t("close")}
-              ></button>
-            </div>
-
-            <div className="offcanvas-body p-0">
-              <div
-                className="sidebar"
-                style={{
-                  minHeight: "auto",
-                }}
-              >
-                <SidebarNav dismissOffcanvas />
-
-                {/* ================= START DISCUSSION ================= */}
-
-                {isAuthenticated ? (
-                  <Link
-                    to="/start-discussion"
-                    className="start-btn w-100 d-flex align-items-center justify-content-center gap-2"
-                    style={{
-                      color: "#fff",
-                      textDecoration: "none",
-                    }}
-                    data-bs-dismiss="offcanvas"
-                  >
-                    <i className="bi bi-plus-lg"></i>
-                    {t("startDiscussion")}
-                  </Link>
-                ) : (
-                  <Link
-                    to="/login"
-                    className="start-btn w-100 d-flex align-items-center justify-content-center gap-2"
-                    style={{
-                      color: "#fff",
-                      textDecoration: "none",
-                    }}
-                    data-bs-dismiss="offcanvas"
-                  >
-                    <i className="bi bi-box-arrow-in-right"></i>
-                    {t("loginToStartDiscussion")}
-                  </Link>
-                )}
-
-                {/* ================= PROFILE / GUEST ================= */}
-
-                {isAuthenticated ? (
-                  <div className="sidebar-profile">
-                    <div className="sidebar-profile-user">
-                      <img
-                        src={profileImageUrl}
-                        alt={loggedInUser?.name || t("user")}
-                        onError={handleProfileImageError}
-                      />
-
-                      <div>
-                        <div className="name">{loggedInUser?.name || t("user")}</div>
-                        <div className="email">{loggedInUser?.email || ""}</div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary w-100"
-                      onClick={handleLogout}
-                      data-bs-dismiss="offcanvas"
-                    >
-                      <i className="bi bi-box-arrow-right me-2"></i>
-                      {t("logOut")}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="p-3">
-                    <div className="d-grid gap-2">
-                      <Link
-                        to="/login"
-                        className="btn btn-outline-primary"
-                        data-bs-dismiss="offcanvas"
-                      >
-                        <i className="bi bi-box-arrow-in-right me-2"></i>
-                        {t("login")}
-                      </Link>
-
-                      <Link
-                        to="/register"
-                        className="btn btn-primary"
-                        data-bs-dismiss="offcanvas"
-                      >
-                        <i className="bi bi-person-plus me-2"></i>
-                        {t("register")}
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* ================= ROUTE CONTENT ================= */}
 
-          <main className="col-lg-9 col-xl-10 main-wrap">
+          <div className="col-lg-9 col-xl-9 content-col px-0">
+          <main className="main-wrap">
             <Outlet
               context={{
                 searchKeyword,
@@ -531,66 +374,73 @@ const MainLayout: FC = () => {
               }}
             />
           </main>
-        </div>
-      </div>
-
-      {/* ================= FEATURES ================= */}
-
-      <section className="features-section">
-        <h2 className="features-title">{t("whyJoin")}</h2>
-
-        <div className="container">
-          <div className="row g-4 text-center">
-            <div className="col-6 col-md-3">
-              <div className="feature-item">
-                <div className="feature-icon purple">
-                  <i className="bi bi-chat-square-text-fill"></i>
-                </div>
-
-                <h5>{t("meaningfulDiscussions")}</h5>
-
-                <p>{t("meaningfulDiscussionsDesc")}</p>
-              </div>
-            </div>
-
-            <div className="col-6 col-md-3">
-              <div className="feature-item">
-                <div className="feature-icon green">
-                  <i className="bi bi-chat-dots-fill"></i>
-                </div>
-
-                <h5>{t("shareYourViews")}</h5>
-
-                <p>{t("shareYourViewsDesc")}</p>
-              </div>
-            </div>
-
-            <div className="col-6 col-md-3">
-              <div className="feature-item">
-                <div className="feature-icon orange">
-                  <i className="bi bi-people-fill"></i>
-                </div>
-
-                <h5>{t("buildCommunity")}</h5>
-
-                <p>{t("buildCommunityDesc")}</p>
-              </div>
-            </div>
-
-            <div className="col-6 col-md-3">
-              <div className="feature-item">
-                <div className="feature-icon red">
-                  <i className="bi bi-shield-fill-check"></i>
-                </div>
-
-                <h5>{t("safeRespectful")}</h5>
-
-                <p>{t("safeRespectfulDesc")}</p>
-              </div>
-            </div>
           </div>
         </div>
-      </section>
+
+          <WhyJoinFeatures />
+      </div>
+
+      <div
+        className="offcanvas offcanvas-start"
+        tabIndex={-1}
+        id="sidebarOffcanvas"
+      >
+        <div className="offcanvas-header">
+          <Link
+            to="/discussion"
+            className="d-flex align-items-center gap-2 text-decoration-none"
+            data-bs-dismiss="offcanvas"
+          >
+            <img src={logoImage} className="headerLogo" alt="Amarsa Vimarsa" />
+            <span className="brand-name">Amarsa Vimarsa</span>
+          </Link>
+
+          <button
+            type="button"
+            className="btn-close"
+            data-bs-dismiss="offcanvas"
+            aria-label={t("close")}
+          ></button>
+        </div>
+
+        <div className="offcanvas-body p-0">
+          <div
+            className="sidebar"
+            style={{
+              minHeight: "auto",
+            }}
+          >
+            <SidebarNav dismissOffcanvas />
+
+            {isAuthenticated && (
+              <div className="sidebar-profile">
+                <div className="sidebar-profile-user">
+                  <img
+                    src={profileImageUrl}
+                    alt={loggedInUser?.name || t("user")}
+                    onError={handleProfileImageError}
+                  />
+
+                  <div>
+                    <div className="name">{loggedInUser?.name || t("user")}</div>
+                    <div className="email">{loggedInUser?.email || ""}</div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-outline-primary w-100"
+                  onClick={handleLogout}
+                  data-bs-dismiss="offcanvas"
+                >
+                  <i className="bi bi-box-arrow-right me-2"></i>
+                  {t("logOut")}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </>
   );
 };

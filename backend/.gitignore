@@ -1,3 +1,12 @@
 node_modules/
 .env
-uploads/
+uploads/*
+!uploads/profiles/
+uploads/profiles/*
+!uploads/profiles/default-profile.png
+!uploads/discussions/
+uploads/discussions/*
+!uploads/discussions/default-discussion.png
+!uploads/competitions/
+uploads/competitions/*
+!uploads/competitions/default-competition.png

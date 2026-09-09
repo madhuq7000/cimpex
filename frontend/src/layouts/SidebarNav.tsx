@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { NavLink } from "react-router-dom";
 
+import { useAuth } from "../core/context/AuthContext";
 import { useLanguage } from "../core/context/LanguageContext";
 
 interface SidebarNavProps {
@@ -9,6 +10,7 @@ interface SidebarNavProps {
 
 const SidebarNav: FC<SidebarNavProps> = ({ dismissOffcanvas = false }) => {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const dismiss = dismissOffcanvas ? "offcanvas" : undefined;
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -23,13 +25,33 @@ const SidebarNav: FC<SidebarNavProps> = ({ dismissOffcanvas = false }) => {
         data-bs-dismiss={dismiss}
       >
         <i className="bi bi-search"></i>
-        {t("browseDiscussions")}
+        {t("discussions")}
+      </NavLink>
+
+      <NavLink
+        to="/competitions"
+        className={navClass}
+        data-bs-dismiss={dismiss}
+      >
+        <i className="bi bi-trophy"></i>
+        {t("competitions")}
       </NavLink>
 
       <NavLink to="/add-category" className={navClass} data-bs-dismiss={dismiss}>
         <i className="bi bi-plus-circle-fill"></i>
         {t("addCategory")}
       </NavLink>
+
+      {isAuthenticated && (
+        <NavLink
+          to="/start-discussion"
+          className={navClass}
+          data-bs-dismiss={dismiss}
+        >
+          <i className="bi bi-plus-lg"></i>
+          {t("startDiscussion")}
+        </NavLink>
+      )}
 
       <NavLink to="/faq" className={navClass} data-bs-dismiss={dismiss}>
         <i className="bi bi-question-circle-fill"></i>

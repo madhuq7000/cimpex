@@ -5,6 +5,7 @@ const {
   getDiscussions,
   getDiscussionById,
   updateDiscussion,
+  deleteDiscussion,
   importDiscussionDocument,
 } = require("../auth-controllers/discussionController");
 
@@ -59,5 +60,7 @@ router.put(
   handleDiscussionMediaUpload,
   updateDiscussion
 );
+
+router.delete("/:id", protect, deleteDiscussion);
 
 module.exports = router;

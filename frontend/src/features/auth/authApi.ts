@@ -28,3 +28,25 @@ export const registerApi = (data: FormData) => {
     data,
   );
 };
+
+export const forgotPasswordApi = (data: { email: string }) => {
+  return api.post<{
+    success: boolean;
+    message: string;
+    resetToken?: string;
+  }>("/auth/forgot-password", data);
+};
+
+export const resetPasswordApi = (data: { token: string; password: string }) => {
+  return api.post<{
+    success: boolean;
+    message: string;
+  }>("/auth/reset-password", data);
+};
+
+export const getMeApi = () => {
+  return api.get<{
+    success: boolean;
+    user: AuthResponse["user"];
+  }>("/auth/me");
+};

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties, ElementType } from "react";
-import DOMPurify from "dompurify";
+import { sanitizeDiscussionHtml } from "../utils/sanitizeDiscussionHtml";
 
 import { useLanguage } from "../context/LanguageContext";
 import { translateContent } from "../i18n/translateContent";
@@ -57,7 +57,7 @@ const TranslatedContent = ({
         className={className}
         style={style}
         dangerouslySetInnerHTML={{
-          __html: DOMPurify.sanitize(output),
+          __html: sanitizeDiscussionHtml(output),
         }}
       />
     );

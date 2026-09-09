@@ -1,14 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import DOMPurify from "dompurify";
+import { sanitizeDiscussionHtml } from "../../../core/utils/sanitizeDiscussionHtml";
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import LinkExtension from "@tiptap/extension-link";
+import ResizableImage from "./resizableImage";
+import { TableKit } from "@tiptap/extension-table";
+import TextAlign from "@tiptap/extension-text-align";
 
-import { API_URL, SERVER_URL } from "../../../core/config/env";
+import { API_URL } from "../../../core/config/env";
 import { useLanguage } from "../../../core/context/LanguageContext";
+import { getYoutubeVideoId } from "../../../core/utils/youtube";
+import VideoSourceFields from "../../../sharedComponent/VideoSourceFields";
+import ImageSourceFields from "../../../sharedComponent/ImageSourceFields";
+import MediaAttachSelect, {
+  type MediaAttachKind,
+} from "../../../sharedComponent/MediaAttachSelect";
 
 interface Category {
   _id: string;
@@ -23,9 +31,14 @@ interface Discussion {
     _id: string;
     name: string;
   };
-  image?: string;
-  video?: string;
+    image?: string;
+    video?: string;
+    youtubeUrl?: string;
+    document?: string;
+    documentName?: string;
 }
+
+const MAX_DESCRIPTION_CHARS = 50000;
 
 const StartDiscussion: React.FC = () => {
   const navigate = useNavigate();
@@ -45,7 +58,7 @@ const StartDiscussion: React.FC = () => {
 
   const [title, setTitle] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("");
-  const [, setDescription] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
 
   const [image, setImage] = useState<File | null>(null);
 
@@ -61,10 +74,20 @@ const StartDiscussion: React.FC = () => {
   const [removeExistingVideo, setRemoveExistingVideo] =
     useState<boolean>(false);
   const [videoPreview, setVideoPreview] = useState<string>("");
+  const [youtubeUrl, setYoutubeUrl] = useState<string>("");
+  const [existingYoutubeUrl, setExistingYoutubeUrl] = useState<string>("");
+  const [removeExistingYoutube, setRemoveExistingYoutube] =
+    useState<boolean>(false);
 
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [existingDocument, setExistingDocument] = useState<string>("");
+  const [existingDocumentName, setExistingDocumentName] = useState<string>("");
+  const [removeExistingDocument, setRemoveExistingDocument] =
+    useState<boolean>(false);
 
   const [importingDocument, setImportingDocument] = useState<boolean>(false);
+
+  const [mediaKind, setMediaKind] = useState<MediaAttachKind>("");
 
   // ==========================================
   // CATEGORY STATES
@@ -94,25 +117,39 @@ const StartDiscussion: React.FC = () => {
 
   const allowedDocumentExtensions = [".pdf", ".doc", ".docx"];
 
-  const allowedVideoTypes = ["video/mp4", "video/webm", "video/ogg"];
-  const allowedVideoExtensions = [".mp4", ".webm", ".ogg"];
-
   // ==========================================
   // TIPTAP EDITOR
   // ==========================================
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
-
-      LinkExtension.configure({
-        openOnClick: false,
-        autolink: true,
-        linkOnPaste: true,
+      StarterKit.configure({
+        link: {
+          openOnClick: false,
+          autolink: true,
+          linkOnPaste: true,
+        },
+      }),
+      ResizableImage.configure({
+        inline: false,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: "imported-doc-image",
+        },
+      }),
+      TextAlign.configure({
+        types: ["heading", "paragraph", "image"],
+      }),
+      TableKit.configure({
+        table: {
+          resizable: false,
+        },
       }),
     ],
 
     content: "",
+
+    immediatelyRender: false,
 
     editorProps: {
       attributes: {
@@ -178,7 +215,7 @@ const StartDiscussion: React.FC = () => {
 
     const fetchDiscussion = async () => {
       try {
-        setPageLoading(true);
+        setPageLoading(false);
 
         setError("");
 
@@ -224,7 +261,27 @@ const StartDiscussion: React.FC = () => {
 
         setRemoveExistingVideo(false);
 
+        setExistingYoutubeUrl(discussion.youtubeUrl || "");
+
+        setYoutubeUrl(discussion.youtubeUrl || "");
+
+        setRemoveExistingYoutube(false);
+
         setVideo(null);
+
+        if (discussion.image) {
+          setMediaKind("image");
+        } else if (discussion.video || discussion.youtubeUrl) {
+          setMediaKind("video");
+        } else if (discussion.document) {
+          setMediaKind("document");
+        } else {
+          setMediaKind("");
+        }
+
+        setExistingDocument(discussion.document || "");
+        setExistingDocumentName(discussion.documentName || "");
+        setRemoveExistingDocument(false);
 
         const discussionDescription = discussion.description || "";
 
@@ -234,7 +291,9 @@ const StartDiscussion: React.FC = () => {
         // PATCH TIPTAP EDITOR
         // ======================================
 
-        editor.commands.setContent(discussionDescription);
+        editor.commands.setContent(
+          sanitizeDiscussionHtml(discussionDescription),
+        );
 
         console.log("Form patched with discussion data");
       } catch (error: any) {
@@ -270,8 +329,8 @@ const StartDiscussion: React.FC = () => {
 
     const extension = `.${file.name.split(".").pop()?.toLowerCase() || ""}`;
 
-    if (file.size > 10 * 1024 * 1024) {
-      setError("Document size must be less than 10MB.");
+    if (file.size > 50 * 1024 * 1024) {
+      setError("Document size must be less than 50MB.");
       event.target.value = "";
       return;
     }
@@ -318,9 +377,10 @@ const StartDiscussion: React.FC = () => {
       setTitle(importedTitle.slice(0, 100));
       setDescription(importedDescription);
       setDocumentFile(file);
+      setRemoveExistingDocument(false);
 
       if (editor) {
-        editor.commands.setContent(DOMPurify.sanitize(importedDescription));
+        editor.commands.setContent(sanitizeDiscussionHtml(importedDescription));
       }
 
       setSuccess(
@@ -329,14 +389,20 @@ const StartDiscussion: React.FC = () => {
     } catch (importError: any) {
       console.error("Failed to import document:", importError);
 
-      setDocumentFile(null);
+      setDocumentFile(file);
+      setRemoveExistingDocument(false);
+
+      if (!title.trim()) {
+        setTitle(file.name.replace(/\.[^.]+$/, "").slice(0, 100));
+      }
 
       if (importError.response?.status === 401) {
+        setDocumentFile(null);
         setError("Unauthorized. Please login again.");
       } else {
         setError(
           importError.response?.data?.message ||
-            "Failed to read this document. Please try another file.",
+            "Could not read text from this document. The file is still attached — add a title and description, then submit.",
         );
       }
 
@@ -358,122 +424,82 @@ const StartDiscussion: React.FC = () => {
     }
   };
 
-  // ==========================================
-  // FILE CHANGE
-  // ==========================================
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    // ======================================
-    // CHECK FILE SIZE
-    // ======================================
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Image size must be less than 5MB.");
-
-      event.target.value = "";
-
-      return;
-    }
-
-    // ======================================
-    // CHECK FILE TYPE
-    // ======================================
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
-
-    if (!allowedTypes.includes(file.type)) {
-      setError("Only JPG, PNG and GIF images are allowed.");
-
-      event.target.value = "";
-
-      return;
-    }
-
-    setError("");
-
-    setImage(file);
-
-    // User selected another image
-    setRemoveExistingImage(false);
-  };
-
-  // ==========================================
-  // REMOVE NEW IMAGE
-  // ==========================================
-
-  const handleRemoveImage = () => {
-    setImage(null);
-
-    const fileInput = document.getElementById(
-      "fileInput",
-    ) as HTMLInputElement | null;
-
-    if (fileInput) {
-      fileInput.value = "";
-    }
-  };
-
-  // ==========================================
-  // REMOVE EXISTING IMAGE
-  // ==========================================
-
   const handleRemoveExistingImage = () => {
     setExistingImage("");
 
     setRemoveExistingImage(true);
   };
 
-  const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    const extension = `.${file.name.split(".").pop()?.toLowerCase() || ""}`;
-
-    if (file.size > 50 * 1024 * 1024) {
-      setError("Video size must be less than 50MB.");
-      event.target.value = "";
-      return;
-    }
-
-    const isAllowedType =
-      allowedVideoTypes.includes(file.type) ||
-      allowedVideoExtensions.includes(extension);
-
-    if (!isAllowedType) {
-      setError("Only MP4, WEBM and OGG videos are allowed.");
-      event.target.value = "";
-      return;
-    }
-
+  const handleVideoFileChange = (file: File | null) => {
     setError("");
     setVideo(file);
-    setRemoveExistingVideo(false);
+
+    if (file) {
+      setYoutubeUrl("");
+      setExistingYoutubeUrl("");
+      setRemoveExistingYoutube(true);
+      setRemoveExistingVideo(false);
+    }
   };
 
-  const handleRemoveVideo = () => {
-    setVideo(null);
+  const handleYoutubeUrlChange = (value: string) => {
+    setYoutubeUrl(value);
+    setRemoveExistingYoutube(!value.trim());
 
-    const videoInput = document.getElementById(
-      "videoInput",
-    ) as HTMLInputElement | null;
-
-    if (videoInput) {
-      videoInput.value = "";
+    if (value.trim()) {
+      setVideo(null);
+      setRemoveExistingVideo(Boolean(existingVideo));
     }
   };
 
   const handleRemoveExistingVideo = () => {
     setExistingVideo("");
     setRemoveExistingVideo(true);
+  };
+
+  const handleRemoveExistingYoutube = () => {
+    setExistingYoutubeUrl("");
+    setYoutubeUrl("");
+    setRemoveExistingYoutube(true);
+  };
+
+  const handleMediaKindChange = (nextKind: MediaAttachKind) => {
+    setMediaKind(nextKind);
+    setError("");
+
+    if (nextKind !== "image") {
+      setImage(null);
+
+      if (existingImage) {
+        setExistingImage("");
+        setRemoveExistingImage(true);
+      }
+    }
+
+    if (nextKind !== "video") {
+      setVideo(null);
+      setYoutubeUrl("");
+
+      if (existingVideo) {
+        setExistingVideo("");
+        setRemoveExistingVideo(true);
+      }
+
+      if (existingYoutubeUrl) {
+        setExistingYoutubeUrl("");
+        setRemoveExistingYoutube(true);
+      }
+    }
+
+    if (nextKind !== "document") {
+      handleRemoveDocument();
+
+      if (existingDocument) {
+        setExistingDocument("");
+        setExistingDocumentName("");
+        setRemoveExistingDocument(true);
+      }
+    }
   };
 
   // ==========================================
@@ -560,87 +586,92 @@ const StartDiscussion: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    event.stopPropagation();
+
+    const showFormError = (message: string) => {
+      setError(message);
+      window.setTimeout(() => {
+        document
+          .getElementById("discussion-form-error")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+    };
 
     setError("");
-
     setSuccess("");
 
-    // ========================================
-    // VALIDATION
-    // ========================================
-
-    if (!title.trim()) {
-      setError("Discussion title is required.");
-
-      return;
-    }
-
-    if (!categoryId) {
-      setError("Please select a category.");
-
-      return;
-    }
-
-    // Validate actual editor text
-    const plainText = editor?.getText().trim() || "";
-
-    if (!plainText) {
-      setError("Discussion description is required.");
-
-      return;
-    }
-
-    if (plainText.length > 5000) {
-      setError("Discussion description cannot exceed 5000 characters.");
-
-      return;
-    }
-
     try {
-      setLoading(true);
+      if (!title.trim()) {
+        showFormError("Discussion title is required.");
+        return;
+      }
 
-      // ========================================
-      // GET TOKEN
-      // ========================================
+      if (!categoryId) {
+        showFormError("Please select a category.");
+        return;
+      }
+
+      let plainText = "";
+      let html = description || "";
+
+      try {
+        plainText = editor?.getText().trim() || "";
+        html = editor?.getHTML() || html;
+      } catch (editorError) {
+        console.error("Could not read editor content:", editorError);
+        plainText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      }
+
+      const hasInlineImages = /<img\s/i.test(html);
+
+      if (!plainText && !hasInlineImages) {
+        showFormError("Discussion description is required.");
+        return;
+      }
+
+      if (plainText.length > MAX_DESCRIPTION_CHARS) {
+        showFormError(
+          `Discussion description cannot exceed ${MAX_DESCRIPTION_CHARS.toLocaleString()} characters.`,
+        );
+        return;
+      }
+
+      if (
+        mediaKind === "video" &&
+        youtubeUrl.trim() &&
+        !getYoutubeVideoId(youtubeUrl)
+      ) {
+        showFormError(t("invalidYoutubeLink"));
+        return;
+      }
 
       const token = localStorage.getItem("token");
 
       if (!token) {
-        setError("You are not logged in. Please login first.");
-
+        showFormError("You are not logged in. Please login first.");
         return;
       }
 
-      // ========================================
-      // CREATE FORMDATA
-      // ========================================
+      setLoading(true);
 
       const formData = new FormData();
 
       formData.append("title", title.trim());
-
-      // Save TipTap HTML
-      const editorHtml = editor?.getHTML() || "";
-
-      formData.append("description", editorHtml);
-
+      formData.append("description", html);
       formData.append("categoryId", categoryId);
 
-      // ========================================
-      // NEW IMAGE (edit only)
-      // ========================================
-
-      if (isEditMode && image) {
+      if (mediaKind === "image" && image) {
         formData.append("image", image);
       }
 
-      if (video) {
+      if (mediaKind === "video" && video) {
         formData.append("video", video);
       }
 
-      // ========================================
-      // REMOVE OLD IMAGE
-      // ========================================
+      formData.append(
+        "youtubeUrl",
+        mediaKind === "video" ? youtubeUrl.trim() : "",
+      );
 
       if (removeExistingImage) {
         formData.append("removeImage", "true");
@@ -650,47 +681,25 @@ const StartDiscussion: React.FC = () => {
         formData.append("removeVideo", "true");
       }
 
-      // ========================================
-      // DEBUG
-      // ========================================
+      if (removeExistingYoutube) {
+        formData.append("removeYoutube", "true");
+      }
 
-      console.log("================================");
+      if (mediaKind === "document" && documentFile) {
+        formData.append("document", documentFile);
+      }
 
-      console.log(isEditMode ? "UPDATING DISCUSSION" : "CREATING DISCUSSION");
-
-      console.log("ID:", id);
-
-      console.log("Title:", title.trim());
-
-      console.log("Category ID:", categoryId);
-
-      console.log("Description HTML:", editorHtml);
-
-      console.log("Description text:", plainText);
-
-      console.log("New Image:", image);
-
-      console.log("Remove Existing Image:", removeExistingImage);
-
-      console.log("================================");
-
-      // ========================================
-      // EDIT DISCUSSION
-      // ========================================
+      if (removeExistingDocument) {
+        formData.append("removeDocument", "true");
+      }
 
       if (isEditMode && id) {
-        const response = await axios.put(
-          `${API_URL}/discussions/${id}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            timeout: 180000,
+        await axios.put(`${API_URL}/discussions/${id}`, formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        );
-
-        console.log("Update discussion response:", response.data);
+          timeout: 180000,
+        });
 
         setSuccess("Discussion updated successfully!");
 
@@ -701,10 +710,6 @@ const StartDiscussion: React.FC = () => {
         return;
       }
 
-      // ========================================
-      // CREATE DISCUSSION
-      // ========================================
-
       const response = await axios.post(`${API_URL}/discussions`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -712,40 +717,24 @@ const StartDiscussion: React.FC = () => {
         timeout: 180000,
       });
 
-      console.log("Create discussion response:", response.data);
-
       setSuccess("Discussion started successfully!");
-
-      // ========================================
-      // CREATED DISCUSSION ID
-      // ========================================
 
       const discussionId = response.data?.data?._id;
 
-      // ========================================
-      // REDIRECT
-      // ========================================
-
-      if (discussionId) {
-        setTimeout(() => {
-          navigate(`/discussion/${discussionId}`);
-        }, 800);
-      } else {
-        setTimeout(() => {
-          navigate("/discussion");
-        }, 800);
-      }
+      setTimeout(() => {
+        navigate(discussionId ? `/discussion/${discussionId}` : "/discussion");
+      }, 800);
     } catch (error: any) {
       console.error("Discussion submit error:", error);
 
-      console.error("API error:", error.response?.data);
-
       if (error.response?.status === 401) {
-        setError("Unauthorized. Please login again.");
+        showFormError("Unauthorized. Please login again.");
       } else if (error.response?.data?.message) {
-        setError(error.response.data.message);
+        showFormError(error.response.data.message);
+      } else if (error.code === "ECONNABORTED") {
+        showFormError("The upload timed out. Please try a smaller file.");
       } else {
-        setError(
+        showFormError(
           isEditMode
             ? "Failed to update discussion."
             : "Failed to start discussion.",
@@ -855,73 +844,6 @@ const StartDiscussion: React.FC = () => {
       ====================================== */}
 
       <form onSubmit={handleSubmit}>
-        {/* ====================================
-            IMPORT DOCUMENT
-        ==================================== */}
-
-        <div className="mb-4">
-          <label className="field-label mb-2">
-            {t("importFromDocument")}{" "}
-            <span className="optional">{t("pdfDocDocx")}</span>
-          </label>
-
-          <label
-            htmlFor="documentInput"
-            className="upload-box"
-            style={{
-              cursor: importingDocument ? "wait" : "pointer",
-              opacity: importingDocument ? 0.7 : 1,
-            }}
-          >
-            <i className="bi bi-file-earmark-text d-block mb-2"></i>
-
-            <div>
-              {importingDocument
-                ? t("readingDocument")
-                : documentFile
-                  ? documentFile.name
-                  : t("dropDocument")}
-            </div>
-
-            {!documentFile && !importingDocument && (
-              <>
-                <div>
-                  <span className="upload-link">{t("orClickBrowse")}</span>
-                </div>
-
-                <div className="upload-hint mt-1">
-                  {t("documentFillHint")}
-                </div>
-              </>
-            )}
-
-            <input
-              type="file"
-              id="documentInput"
-              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              className="d-none"
-              disabled={importingDocument}
-              onChange={handleDocumentChange}
-            />
-          </label>
-
-          {documentFile && !importingDocument && (
-            <div className="mt-2">
-              <small className="text-muted">
-                {t("imported", { name: documentFile.name })}
-              </small>
-
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-danger ms-2"
-                onClick={handleRemoveDocument}
-              >
-                {t("remove")}
-              </button>
-            </div>
-          )}
-        </div>
-
         {/* ====================================
             TITLE
         ==================================== */}
@@ -1053,6 +975,63 @@ const StartDiscussion: React.FC = () => {
                 <i className="bi bi-link-45deg"></i>
               </button>
 
+              {editor?.isActive("image") && (
+                <>
+                  <button
+                    type="button"
+                    className={`editor-tool ${
+                      editor.isActive("image", { align: "left" }) ? "active" : ""
+                    }`}
+                    title="Align image left"
+                    onClick={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .updateAttributes("image", { align: "left" })
+                        .run()
+                    }
+                  >
+                    <i className="bi bi-text-left"></i>
+                  </button>
+                  <button
+                    type="button"
+                    className={`editor-tool ${
+                      editor.isActive("image", { align: "center" })
+                        ? "active"
+                        : ""
+                    }`}
+                    title="Align image center"
+                    onClick={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .updateAttributes("image", { align: "center" })
+                        .run()
+                    }
+                  >
+                    <i className="bi bi-text-center"></i>
+                  </button>
+                  <button
+                    type="button"
+                    className={`editor-tool ${
+                      editor.isActive("image", { align: "right" })
+                        ? "active"
+                        : ""
+                    }`}
+                    title="Align image right"
+                    onClick={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .updateAttributes("image", { align: "right" })
+                        .run()
+                    }
+                  >
+                    <i className="bi bi-text-right"></i>
+                  </button>
+                </>
+              )}
+
               {/* REMOVE LINK */}
 
               {editor?.isActive("link") && (
@@ -1096,199 +1075,82 @@ const StartDiscussion: React.FC = () => {
 
           <div className="char-count">
             <span>{descriptionLength}</span>
-            /5000
+            /{MAX_DESCRIPTION_CHARS.toLocaleString()}
           </div>
         </div>
 
-        {/* ====================================
-            VIDEO
-        ==================================== */}
+        <MediaAttachSelect
+          value={mediaKind}
+          options={["image", "document", "video"]}
+          onChange={handleMediaKindChange}
+        />
 
-        <div className="mb-4">
-          <label className="field-label mb-2">
-            {t("uploadVideo")} <span className="optional">{t("optional")}</span>
-          </label>
-
-          {existingVideo && !video && (
-            <div className="mb-3">
-              <div className="mb-2">
-                <small className="text-muted">{t("currentVideo")}</small>
-              </div>
-
-              <video
-                src={`${SERVER_URL}${existingVideo}`}
-                controls
-                style={{
-                  width: "100%",
-                  maxWidth: "420px",
-                  maxHeight: "240px",
-                  borderRadius: "8px",
-                  background: "#000",
-                }}
-              />
-
-              <button
-                type="button"
-                className="btn btn-sm btn-danger ms-2"
-                onClick={handleRemoveExistingVideo}
-              >
-                {t("remove")}
-              </button>
-            </div>
-          )}
-
-          <label
-            htmlFor="videoInput"
-            className="upload-box"
-            style={{
-              cursor: "pointer",
-            }}
-          >
-            <i className="bi bi-camera-video d-block mb-2"></i>
-
-            <div>{video ? video.name : t("dropVideo")}</div>
-
-            {!video && (
-              <>
-                <div>
-                  <span className="upload-link">{t("orClickBrowse")}</span>
-                </div>
-
-                <div className="upload-hint mt-1">
-                  {t("videoHint")}
-                </div>
-              </>
-            )}
-
-            <input
-              type="file"
-              id="videoInput"
-              accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"
-              className="d-none"
-              onChange={handleVideoChange}
-            />
-          </label>
-
-          {videoPreview && (
-            <div className="mt-3">
-              <video
-                src={videoPreview}
-                controls
-                style={{
-                  width: "100%",
-                  maxWidth: "420px",
-                  maxHeight: "240px",
-                  borderRadius: "8px",
-                  background: "#000",
-                }}
-              />
-            </div>
-          )}
-
-          {video && (
-            <div className="mt-2">
-              <small className="text-muted">
-                {t("selected", { name: video.name })}
-              </small>
-
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-danger ms-2"
-                onClick={handleRemoveVideo}
-              >
-                {t("remove")}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ====================================
-            IMAGE (edit only)
-        ==================================== */}
-
-        {isEditMode && (
+        {mediaKind === "document" && (
           <div className="mb-4">
             <label className="field-label mb-2">
-              Upload Image <span className="optional">{t("optional")}</span>
+              {t("importFromDocument")}{" "}
+              <span className="optional">{t("pdfDocDocx")}</span>
             </label>
 
-            {existingImage && !image && (
-              <div className="mb-3">
-                <div className="mb-2">
-                  <small className="text-muted">{t("currentImage")}</small>
-                </div>
-
-                <div
-                  style={{
-                    position: "relative",
-                    display: "inline-block",
-                  }}
-                >
-                  <img
-                    src={`${SERVER_URL}${existingImage}`}
-                    alt="Current discussion"
-                    style={{
-                      width: "200px",
-                      height: "130px",
-                      objectFit: "cover",
-                      borderRadius: "8px",
-                      border: "1px solid #ddd",
-                    }}
-                  />
-
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-danger ms-2"
-                    onClick={handleRemoveExistingImage}
-                  >
-                    {t("remove")}
-                  </button>
-                </div>
-              </div>
-            )}
-
             <label
-              htmlFor="fileInput"
+              htmlFor="documentInput"
               className="upload-box"
               style={{
-                cursor: "pointer",
+                cursor: importingDocument ? "wait" : "pointer",
+                opacity: importingDocument ? 0.7 : 1,
               }}
             >
-              <i className="bi bi-cloud-arrow-up d-block mb-2"></i>
+              <i className="bi bi-file-earmark-text d-block mb-2"></i>
 
-              <div>{image ? image.name : t("dropImage")}</div>
+              <div>
+                {importingDocument
+                  ? t("readingDocument")
+                  : documentFile
+                    ? documentFile.name
+                    : existingDocument
+                      ? existingDocumentName || t("currentDocument")
+                      : t("dropDocument")}
+              </div>
 
-              {!image && (
+              {!documentFile && !existingDocument && !importingDocument && (
                 <>
                   <div>
                     <span className="upload-link">{t("orClickBrowse")}</span>
                   </div>
 
                   <div className="upload-hint mt-1">
-                    {t("imageHint")}
+                    {t("documentFillHint")}
                   </div>
                 </>
               )}
 
               <input
                 type="file"
-                id="fileInput"
-                accept=".jpg,.jpeg,.png,.gif"
+                id="documentInput"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 className="d-none"
-                onChange={handleFileChange}
+                disabled={importingDocument}
+                onChange={handleDocumentChange}
               />
             </label>
 
-            {image && (
+            {(documentFile || existingDocument) && !importingDocument && (
               <div className="mt-2">
                 <small className="text-muted">
-                  {t("selected", { name: image.name })}
+                  {t("imported", {
+                    name: documentFile?.name || existingDocumentName || "",
+                  })}
                 </small>
 
                 <button
                   type="button"
                   className="btn btn-sm btn-outline-danger ms-2"
-                  onClick={handleRemoveImage}
+                  onClick={() => {
+                    handleRemoveDocument();
+                    setExistingDocument("");
+                    setExistingDocumentName("");
+                    setRemoveExistingDocument(true);
+                  }}
                 >
                   {t("remove")}
                 </button>
@@ -1297,9 +1159,49 @@ const StartDiscussion: React.FC = () => {
           </div>
         )}
 
+        {mediaKind === "video" && (
+          <VideoSourceFields
+            inputId="videoInput"
+            video={video}
+            videoPreview={videoPreview}
+            youtubeUrl={youtubeUrl}
+            existingVideo={existingVideo}
+            existingYoutubeUrl={existingYoutubeUrl}
+            previewTitle={title}
+            onVideoChange={handleVideoFileChange}
+            onYoutubeChange={handleYoutubeUrlChange}
+            onRemoveExistingVideo={handleRemoveExistingVideo}
+            onRemoveExistingYoutube={handleRemoveExistingYoutube}
+            onError={setError}
+          />
+        )}
+
+        {mediaKind === "image" && (
+          <ImageSourceFields
+            inputId="fileInput"
+            image={image}
+            existingImage={existingImage}
+            onImageChange={(file) => {
+              setError("");
+              setImage(file);
+              setRemoveExistingImage(false);
+            }}
+            onRemoveExistingImage={handleRemoveExistingImage}
+            onError={setError}
+          />
+        )}
+
         {/* ====================================
             ACTION BUTTONS
         ==================================== */}
+
+        {error && (
+          <div id="discussion-form-error" className="alert alert-danger">
+            {error}
+          </div>
+        )}
+
+        {success && <div className="alert alert-success">{success}</div>}
 
         <div className="d-flex justify-content-end gap-2 action-row">
           <button

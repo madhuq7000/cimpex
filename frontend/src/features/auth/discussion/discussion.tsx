@@ -1,11 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import axios from "axios";
 
 import { API_URL, SERVER_URL } from "../../../core/config/env";
 import { useLanguage } from "../../../core/context/LanguageContext";
-import { downloadDiscussionPdf } from "./downloadDiscussionPdf";
+import {
+  getProfileImageUrl,
+  handleProfileImageError,
+} from "../../../core/utils/profileImage";
+import {
+  DEFAULT_DISCUSSION_IMAGE,
+  getDiscussionImageUrl,
+} from "../../../core/utils/mediaDefaults";
+import { downloadDiscussionPdf, downloadOriginalDocument } from "./downloadDiscussionPdf";
 import TranslatedContent from "../../../core/i18n/TranslatedContent";
+import VideoMedia from "../../../sharedComponent/VideoMedia";
+import CategoryScroller from "../../../sharedComponent/CategoryScroller";
 
 // ==========================================
 // CATEGORY
@@ -40,6 +50,9 @@ interface DiscussionItem {
 
   image?: string;
   video?: string;
+  youtubeUrl?: string;
+  document?: string;
+  documentName?: string;
   createdAt?: string;
   commentCount?: number;
 }
@@ -47,48 +60,6 @@ interface DiscussionItem {
 interface DiscussionOutletContext {
   searchKeyword?: string;
 }
-
-const DEFAULT_PROFILE_IMAGE = `${SERVER_URL}/uploads/profiles/default-profile.png`;
-
-// ==========================================
-// GET PROFILE IMAGE URL
-// ==========================================
-
-const getProfileImageUrl = (profileImage?: string) => {
-  // No profile image
-  if (
-    !profileImage ||
-    profileImage.trim() === "" ||
-    profileImage === "default-profile.png"
-  ) {
-    return DEFAULT_PROFILE_IMAGE;
-  }
-
-  // Complete URL
-  if (
-    profileImage.startsWith("http://") ||
-    profileImage.startsWith("https://")
-  ) {
-    return profileImage;
-  }
-
-  // Example:
-  // /uploads/profiles/profile-123.jpg
-  if (profileImage.startsWith("/uploads/")) {
-    return `${SERVER_URL}${profileImage}`;
-  }
-
-  // Example:
-  // uploads/profiles/profile-123.jpg
-  if (profileImage.startsWith("uploads/")) {
-    return `${SERVER_URL}/${profileImage}`;
-  }
-
-  // Filename only
-  // Example:
-  // profile-123.jpg
-  return `${SERVER_URL}/uploads/profiles/${profileImage}`;
-};
 
 // ==========================================
 // DISCUSSION COMPONENT
@@ -132,20 +103,6 @@ const Discussion: React.FC = () => {
     searchParams.get("q") ??
     ""
   ).trim();
-
-  // ==========================================
-  // PROFILE IMAGE ERROR
-  // ==========================================
-
-  const handleProfileImageError = (
-    e: React.SyntheticEvent<HTMLImageElement>,
-  ) => {
-    // Prevent endless error loop
-    e.currentTarget.onerror = null;
-
-    // Show default image
-    e.currentTarget.src = DEFAULT_PROFILE_IMAGE;
-  };
 
   // ==========================================
   // GET DISCUSSIONS
@@ -260,6 +217,14 @@ const Discussion: React.FC = () => {
       setDownloadingPdfId(discussion._id);
       setError("");
 
+      if (discussion.document) {
+        await downloadOriginalDocument(
+          `${SERVER_URL}${discussion.document}`,
+          discussion.documentName || "document",
+        );
+        return;
+      }
+
       const response = await axios.get(
         `${API_URL}/comments/discussion/${discussion._id}`,
       );
@@ -283,14 +248,6 @@ const Discussion: React.FC = () => {
     } finally {
       setDownloadingPdfId("");
     }
-  };
-
-  // ==========================================
-  // CREATE DISCUSSION
-  // ==========================================
-
-  const handleCreateDiscussion = () => {
-    navigate("/start-discussion");
   };
 
   // ==========================================
@@ -320,22 +277,16 @@ const Discussion: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleCreateDiscussion}
-        >
+        <Link to="/start-discussion" className="start-discussion-link">
           + {t("startDiscussion")}
-        </button>
+        </Link>
       </div>
 
       {/* ======================================
           CATEGORY FILTERS
       ====================================== */}
 
-      <div className="filters">
-        {/* ALL */}
-
+      <CategoryScroller>
         <button
           type="button"
           className={`chip ${selectedCategory === "all" ? "active" : ""}`}
@@ -344,19 +295,13 @@ const Discussion: React.FC = () => {
           {t("all")}
         </button>
 
-        {/* CATEGORY LOADING */}
-
         {categoryLoading && (
           <span className="text-muted ms-2">{t("loadingCategories")}</span>
         )}
 
-        {/* CATEGORY ERROR */}
-
         {!categoryLoading && categoryError && (
           <span className="text-danger ms-2">{categoryError}</span>
         )}
-
-        {/* DYNAMIC CATEGORIES */}
 
         {!categoryLoading &&
           !categoryError &&
@@ -372,13 +317,13 @@ const Discussion: React.FC = () => {
               <TranslatedContent text={category.name} />
             </button>
           ))}
-      </div>
+      </CategoryScroller>
 
       {/* ======================================
           MAIN CONTAINER
       ====================================== */}
 
-      <div className="container mt-4 mb-5">
+      <div className="mt-4 mb-5">
         {/* ======================================
             DISCUSSION LOADING
         ====================================== */}
@@ -404,7 +349,7 @@ const Discussion: React.FC = () => {
         ====================================== */}
 
         {!loading && !error && filteredDiscussions.length > 0 && (
-          <div className="row">
+          <div className="row mx-0">
             {filteredDiscussions.map((discussion) => {
               // ==============================
               // AUTHOR NAME
@@ -428,26 +373,24 @@ const Discussion: React.FC = () => {
                   <article className="discussion-card">
                     <div className="row g-3">
                       {/* =====================
-                              DISCUSSION IMAGE
+                              DISCUSSION IMAGE / VIDEO
                           ===================== */}
 
                       <div className="col-md-3 col-lg-2">
                         <div className="thumb">
-                          {discussion.video ? (
-                            <video
-                              src={`${SERVER_URL}${discussion.video}`}
-                              muted
-                              preload="metadata"
-                            />
-                          ) : discussion.image ? (
-                            <img
-                              src={`${SERVER_URL}${discussion.image}`}
-                              alt={discussion.title}
+                          {discussion.video || discussion.youtubeUrl ? (
+                            <VideoMedia
+                              video={discussion.video}
+                              youtubeUrl={discussion.youtubeUrl}
+                              title={discussion.title}
                             />
                           ) : (
                             <img
-                              src="https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=300&fit=crop"
-                              alt="Discussion"
+                              src={getDiscussionImageUrl(discussion.image)}
+                              alt={discussion.title}
+                              onError={(event) => {
+                                event.currentTarget.src = DEFAULT_DISCUSSION_IMAGE;
+                              }}
                             />
                           )}
                         </div>
@@ -521,47 +464,49 @@ const Discussion: React.FC = () => {
                             ===================== */}
 
                         <div className="card-footer-custom">
-                          {/* COMMENTS */}
-
                           <span className="stat">
                             <i className="bi bi-chat-square-text me-1"></i>
                             {discussion.commentCount ?? 0}
                           </span>
 
-                          {/* BOOKMARK */}
+                          <div className="card-footer-actions">
+                            <button
+                              type="button"
+                              className="btn btn-outline-primary action-icon-btn"
+                              aria-label={t("viewDiscussion")}
+                              title={t("viewDiscussion")}
+                              onClick={() => handleViewDiscussion(discussion._id)}
+                            >
+                              <i className="bi bi-eye"></i>
+                            </button>
 
-                          <button
-                            type="button"
-                            className="bookmark-btn"
-                            aria-label={t("bookmark")}
-                          >
-                            <i className="bi bi-bookmark"></i>
-                          </button>
-                        </div>
-
-                        {/* =====================
-                                VIEW DISCUSSION
-                            ===================== */}
-
-                        <div className="d-flex flex-wrap gap-2 mt-3">
-                          <button
-                            type="button"
-                            className="btn btn-outline-primary align-self-start"
-                            onClick={() => handleViewDiscussion(discussion._id)}
-                          >
-                            {t("viewDiscussion")}
-                          </button>
-
-                          <button
-                            type="button"
-                            className="btn btn-outline-primary align-self-start"
-                            disabled={downloadingPdfId === discussion._id}
-                            onClick={() => handleDownloadPdf(discussion)}
-                          >
-                            {downloadingPdfId === discussion._id
-                              ? t("preparingPdf")
-                              : t("downloadPdf")}
-                          </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-primary action-icon-btn"
+                              aria-label={
+                                downloadingPdfId === discussion._id
+                                  ? t("preparingPdf")
+                                  : discussion.document
+                                    ? t("downloadFile")
+                                    : t("downloadPdf")
+                              }
+                              title={
+                                downloadingPdfId === discussion._id
+                                  ? t("preparingPdf")
+                                  : discussion.document
+                                    ? t("downloadFile")
+                                    : t("downloadPdf")
+                              }
+                              disabled={downloadingPdfId === discussion._id}
+                              onClick={() => handleDownloadPdf(discussion)}
+                            >
+                              {downloadingPdfId === discussion._id ? (
+                                <span className="spinner-border spinner-border-sm" role="status"></span>
+                              ) : (
+                                <i className="bi bi-download"></i>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -588,13 +533,9 @@ const Discussion: React.FC = () => {
                   : t("noCategoryDiscussions")}
             </p>
 
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleCreateDiscussion}
-            >
+            <Link to="/start-discussion" className="start-discussion-link">
               {t("startDiscussion")}
-            </button>
+            </Link>
           </div>
         )}
       </div>

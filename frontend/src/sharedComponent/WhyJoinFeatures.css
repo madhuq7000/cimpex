@@ -1,0 +1,92 @@
+.features-section {
+  width: 100%;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  padding: 2.75rem 2.25rem 3rem;
+}
+
+.features-section h2,
+.features-section .features-title {
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 2rem;
+  letter-spacing: -0.02em;
+  color: #111827;
+}
+
+.features-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem 1.5rem;
+  max-width: none;
+}
+
+.features-section .feature-item {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 12px;
+  width: 100%;
+  height: auto;
+  text-align: left !important;
+  padding: 0 !important;
+}
+
+.features-section .feature-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 0 !important;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #2e3094;
+  font-size: 20px;
+}
+
+.features-section .feature-copy {
+  min-width: 0;
+}
+
+.features-section .feature-item h5 {
+  display: block !important;
+  width: 100%;
+  margin: 0 0 4px !important;
+  text-align: left !important;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #111827;
+}
+
+.features-section .feature-item p {
+  display: block !important;
+  width: 100%;
+  max-width: none;
+  margin: 0 !important;
+  text-align: left !important;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+@media (max-width: 767.98px) {
+  .features-section {
+    padding: 2rem 1rem 2.25rem;
+  }
+
+  .features-list {
+    grid-template-columns: 1fr;
+    gap: 1.35rem;
+  }
+
+  .features-section h2,
+  .features-section .features-title {
+    font-size: 20px;
+    margin-bottom: 1.5rem;
+  }
+}

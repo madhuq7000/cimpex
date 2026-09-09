@@ -7,8 +7,18 @@ import axios from "axios";
 import { useAuth } from "../../../core/context/AuthContext";
 import { useLanguage } from "../../../core/context/LanguageContext";
 import { API_URL, SERVER_URL } from "../../../core/config/env";
-import { downloadDiscussionPdf } from "./downloadDiscussionPdf";
+import {
+  getProfileImageUrl,
+  handleProfileImageError,
+} from "../../../core/utils/profileImage";
+import {
+  DEFAULT_DISCUSSION_IMAGE,
+  getDiscussionImageUrl,
+} from "../../../core/utils/mediaDefaults";
+import { downloadDiscussionPdf, downloadOriginalDocument } from "./downloadDiscussionPdf";
 import TranslatedContent from "../../../core/i18n/TranslatedContent";
+import VideoMedia from "../../../sharedComponent/VideoMedia";
+import ShareMenu from "../../../sharedComponent/ShareMenu";
 
 // ==========================================
 // DISCUSSION
@@ -33,6 +43,9 @@ interface Discussion {
 
   image?: string;
   video?: string;
+  youtubeUrl?: string;
+  document?: string;
+  documentName?: string;
   createdAt?: string;
 }
 
@@ -73,24 +86,9 @@ interface LoggedInUser {
   profileImage?: string;
 }
 
-const getProfileImageUrl = (profileImage?: string | null) => {
-  if (!profileImage || profileImage === "default-profile.png") {
-    return `${SERVER_URL}/uploads/profiles/default-profile.png`;
-  }
-
-  if (
-    profileImage.startsWith("http://") ||
-    profileImage.startsWith("https://")
-  ) {
-    return profileImage;
-  }
-
-  if (profileImage.startsWith("/uploads/")) {
-    return `${SERVER_URL}${profileImage}`;
-  }
-
-  return `${SERVER_URL}/uploads/profiles/${profileImage}`;
-};
+// ==========================================
+// DISCUSSION DETAILS COMPONENT
+// ==========================================
 
 // ==========================================
 // DISCUSSION DETAILS
@@ -131,20 +129,6 @@ const DiscussionDetails: React.FC = () => {
   const loggedInUserImage = getProfileImageUrl(loggedInUser?.profileImage);
 
   // ==========================================
-  // IMAGE ERROR FALLBACK
-  // ==========================================
-
-  const handleProfileImageError = (
-    e: React.SyntheticEvent<HTMLImageElement>,
-  ) => {
-    const defaultImage = `${SERVER_URL}/uploads/profiles/default-profile.png`;
-
-    if (e.currentTarget.src !== defaultImage) {
-      e.currentTarget.src = defaultImage;
-    }
-  };
-
-  // ==========================================
   // DISCUSSION STATE
   // ==========================================
 
@@ -171,6 +155,18 @@ const DiscussionDetails: React.FC = () => {
   const [sortComments, setSortComments] = useState<string>("Latest");
 
   const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
+
+  const [deletingDiscussion, setDeletingDiscussion] = useState(false);
+
+  const [deletingCommentId, setDeletingCommentId] = useState<string>("");
+
+  const currentUserId = String(loggedInUser?.id || loggedInUser?._id || "");
+
+  const isDiscussionOwner = Boolean(
+    currentUserId &&
+      discussion?.createdBy?._id &&
+      String(discussion.createdBy._id) === currentUserId,
+  );
 
   // ==========================================
   // GET DISCUSSION DETAILS
@@ -362,6 +358,14 @@ const DiscussionDetails: React.FC = () => {
     try {
       setDownloadingPdf(true);
 
+      if (discussion.document) {
+        await downloadOriginalDocument(
+          `${SERVER_URL}${discussion.document}`,
+          discussion.documentName || "document",
+        );
+        return;
+      }
+
       await downloadDiscussionPdf({
         title: discussion.title,
         description: discussion.description,
@@ -376,6 +380,78 @@ const DiscussionDetails: React.FC = () => {
       setError("Failed to download PDF. Please try again.");
     } finally {
       setDownloadingPdf(false);
+    }
+  };
+
+  const handleDeleteDiscussion = async () => {
+    if (!discussion || deletingDiscussion) {
+      return;
+    }
+
+    if (!window.confirm(t("deleteDiscussionConfirm"))) {
+      return;
+    }
+
+    try {
+      setDeletingDiscussion(true);
+      setError("");
+
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setError(t("pleaseLoginToComment"));
+        return;
+      }
+
+      await axios.delete(`${API_URL}/discussions/${discussion._id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      navigate("/discussion", { replace: true });
+    } catch (deleteError: any) {
+      setError(
+        deleteError.response?.data?.message || t("failedDeleteDiscussion"),
+      );
+    } finally {
+      setDeletingDiscussion(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!commentId || deletingCommentId) {
+      return;
+    }
+
+    if (!window.confirm(t("deleteCommentConfirm"))) {
+      return;
+    }
+
+    try {
+      setDeletingCommentId(commentId);
+      setCommentError("");
+
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setCommentError(t("pleaseLoginToComment"));
+        return;
+      }
+
+      await axios.delete(`${API_URL}/comments/${commentId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setComments((prev) => prev.filter((item) => item._id !== commentId));
+    } catch (deleteError: any) {
+      setCommentError(
+        deleteError.response?.data?.message || t("failedDeleteComment"),
+      );
+    } finally {
+      setDeletingCommentId("");
     }
   };
 
@@ -438,13 +514,10 @@ const DiscussionDetails: React.FC = () => {
       <div className="container py-5">
         <div className="alert alert-danger">{error}</div>
 
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => navigate("/discussion")}
-        >
-          {t("browseDiscussions")}
-        </button>
+        <Link to="/discussion" className="back-link">
+          <i className="bi bi-arrow-left"></i>
+          {t("backButton")}
+        </Link>
       </div>
     );
   }
@@ -458,13 +531,10 @@ const DiscussionDetails: React.FC = () => {
       <div className="container text-center py-5">
         <h4>Discussion not found</h4>
 
-        <button
-          type="button"
-          className="btn btn-primary mt-3"
-          onClick={() => navigate("/discussion")}
-        >
-          {t("browseDiscussions")}
-        </button>
+        <Link to="/discussion" className="back-link">
+          <i className="bi bi-arrow-left"></i>
+          {t("backButton")}
+        </Link>
       </div>
     );
   }
@@ -507,6 +577,12 @@ const DiscussionDetails: React.FC = () => {
       ====================================== */}
 
       <div className="breadcrumb-wrap mb-3">
+        <Link to="/discussion" className="back-link">
+          <i className="bi bi-arrow-left"></i>
+          {t("backButton")}
+        </Link>
+
+        <div>
         <a
           href="#"
           onClick={(e) => {
@@ -536,6 +612,7 @@ const DiscussionDetails: React.FC = () => {
         <span className="current">
           <TranslatedContent text={discussion.title} />
         </span>
+        </div>
       </div>
 
       {/* ======================================
@@ -554,10 +631,10 @@ const DiscussionDetails: React.FC = () => {
         </span>
 
         {/* ====================================
-            EDIT
+            EDIT / DELETE
         ==================================== */}
 
-        {isAuthenticated && (
+        {isAuthenticated && isDiscussionOwner && (
           <>
             &nbsp;&nbsp;
             <span
@@ -568,6 +645,21 @@ const DiscussionDetails: React.FC = () => {
               onClick={() => navigate(`/discussion/edit/${discussion._id}`)}
             >
               {t("edit")}
+            </span>
+            &nbsp;&nbsp;
+            <span
+              className="badge-tech d-inline-block mb-3"
+              style={{
+                cursor: deletingDiscussion ? "wait" : "pointer",
+                opacity: deletingDiscussion ? 0.7 : 1,
+              }}
+              onClick={() => {
+                if (!deletingDiscussion) {
+                  void handleDeleteDiscussion();
+                }
+              }}
+            >
+              {deletingDiscussion ? t("deleting") : t("delete")}
             </span>
           </>
         )}
@@ -625,22 +717,42 @@ const DiscussionDetails: React.FC = () => {
 
           {/* STATS + DOWNLOAD */}
 
-          <div className="d-flex flex-wrap align-items-center gap-3">
+          <div className="card-actions mt-0">
             <span className="stat-pill">
               <i className="bi bi-chat"></i> {t("commentsCount", { count: comments.length })}
             </span>
 
-            <a
-              href="#"
-              className="btn btn-outline-primary"
-              onClick={(event) => {
-                event.preventDefault();
-                handleDownloadPdf();
-              }}
+            <button
+              type="button"
+              className="btn btn-outline-primary action-icon-btn"
+              aria-label={
+                downloadingPdf
+                  ? t("preparingPdf")
+                  : discussion.document
+                    ? t("downloadFile")
+                    : t("downloadPdf")
+              }
+              title={
+                downloadingPdf
+                  ? t("preparingPdf")
+                  : discussion.document
+                    ? t("downloadFile")
+                    : t("downloadPdf")
+              }
+              disabled={downloadingPdf}
+              onClick={handleDownloadPdf}
             >
-              <i className="bi bi-download me-1"></i>
-              {downloadingPdf ? t("preparingPdf") : t("downloadPdf")}
-            </a>
+              {downloadingPdf ? (
+                <span className="spinner-border spinner-border-sm" role="status"></span>
+              ) : (
+                <i className="bi bi-download"></i>
+              )}
+            </button>
+
+            <ShareMenu
+              path={`/discussion/${discussion._id}`}
+              title={discussion.title}
+            />
           </div>
         </div>
 
@@ -663,45 +775,45 @@ const DiscussionDetails: React.FC = () => {
             DISCUSSION MEDIA
         ====================================== */}
 
-        {discussion.video && (
+        {(discussion.video || discussion.youtubeUrl) && (
           <div className="mb-3">
-            <video
-              src={`${SERVER_URL}${discussion.video}`}
-              controls
-              preload="metadata"
-              style={{
-                width: "100%",
-                maxHeight: "450px",
-                borderRadius: "10px",
-                background: "#000",
-              }}
-            >
-              {t("videoNotSupported")}
-            </video>
+            <VideoMedia
+              video={discussion.video}
+              youtubeUrl={discussion.youtubeUrl}
+              title={discussion.title}
+              variant="wide"
+            />
           </div>
         )}
 
         {discussion.image ? (
           <div className="hero-banner mb-1">
             <img
-              src={`${SERVER_URL}${discussion.image}`}
+              src={getDiscussionImageUrl(discussion.image)}
               alt={discussion.title}
+              onError={(event) => {
+                event.currentTarget.src = DEFAULT_DISCUSSION_IMAGE;
+              }}
               style={{
                 width: "100%",
-
                 maxHeight: "450px",
-
                 objectFit: "cover",
-
                 borderRadius: "10px",
               }}
             />
           </div>
-        ) : !discussion.video ? (
+        ) : !discussion.video && !discussion.youtubeUrl ? (
           <div className="hero-banner mb-1">
-            <div className="glyph">
-              <i className="bi bi-chat-square-text"></i>
-            </div>
+            <img
+              src={DEFAULT_DISCUSSION_IMAGE}
+              alt={discussion.title}
+              style={{
+                width: "100%",
+                maxHeight: "450px",
+                objectFit: "cover",
+                borderRadius: "10px",
+              }}
+            />
           </div>
         ) : null}
       </div>
@@ -769,23 +881,40 @@ const DiscussionDetails: React.FC = () => {
               <div className="comment-thread mb-3" key={comment._id}>
                 {/* COMMENT AUTHOR */}
 
-                <div className="d-flex align-items-center gap-2 mb-2">
-                  <img
-                    src={commentProfileImage}
-                    className="avatar-sm avatar"
-                    alt={commentUserName}
-                    onError={handleProfileImageError}
-                  />
+                <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+                  <div className="d-flex align-items-center gap-2">
+                    <img
+                      src={commentProfileImage}
+                      className="avatar-sm avatar"
+                      alt={commentUserName}
+                      onError={handleProfileImageError}
+                    />
 
-                  <div>
-                    <span className="opinion-name">{commentUserName}</span>
+                    <div>
+                      <span className="opinion-name">{commentUserName}</span>
 
-                    {comment.createdAt && (
-                      <div className="opinion-time">
-                        {formatCommentDate(comment.createdAt)}
-                      </div>
-                    )}
+                      {comment.createdAt && (
+                        <div className="opinion-time">
+                          {formatCommentDate(comment.createdAt)}
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {isAuthenticated &&
+                    (isDiscussionOwner ||
+                      String(comment.createdBy?._id || "") === currentUserId) && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger"
+                        disabled={deletingCommentId === comment._id}
+                        onClick={() => void handleDeleteComment(comment._id)}
+                      >
+                        {deletingCommentId === comment._id
+                          ? t("deleting")
+                          : t("delete")}
+                      </button>
+                    )}
                 </div>
 
                 {/* COMMENT */}

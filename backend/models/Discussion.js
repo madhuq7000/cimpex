@@ -24,6 +24,21 @@ const discussionSchema = new mongoose.Schema(
       default: "",
     },
 
+    youtubeUrl: {
+      type: String,
+      default: "",
+    },
+
+    document: {
+      type: String,
+      default: "",
+    },
+
+    documentName: {
+      type: String,
+      default: "",
+    },
+
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",

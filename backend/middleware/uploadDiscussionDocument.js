@@ -20,11 +20,6 @@ const fileFilter = (req, file, cb) => {
     return;
   }
 
-  if (file.mimetype && !allowedMimeTypes.includes(file.mimetype)) {
-    cb(new Error("Only PDF, DOC and DOCX files are allowed"));
-    return;
-  }
-
   cb(null, true);
 };
 
@@ -32,7 +27,7 @@ const uploadDiscussionDocument = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024,
+    fileSize: 50 * 1024 * 1024,
   },
 });
 
@@ -47,7 +42,7 @@ const handleDiscussionDocumentUpload = (req, res, next) => {
       if (error.code === "LIMIT_FILE_SIZE") {
         return res.status(400).json({
           success: false,
-          message: "Document size must be less than 10MB",
+          message: "Document size must be less than 50MB",
         });
       }
 

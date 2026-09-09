@@ -25,6 +25,18 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
 
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    facebookId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
     profileImage: {
       type: String,
       default: "",
@@ -45,6 +57,16 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    resetPasswordToken: {
+      type: String,
+      select: false,
+    },
+
+    resetPasswordExpires: {
+      type: Date,
+      select: false,
     },
   },
   {

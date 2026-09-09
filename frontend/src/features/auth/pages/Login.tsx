@@ -1,6 +1,6 @@
 // features/auth/pages/Login.tsx
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { loginApi } from "../authApi";
 import { useAuth } from "../../../core/context/AuthContext";
 import { useLanguage } from "../../../core/context/LanguageContext";
@@ -8,6 +8,8 @@ import type { LoginPayload } from "../types";
 import loginImage from "../../../assets/images/login.png";
 import logoImage from "../../../assets/images/logo.png";
 import LanguageSwitcher from "../../../sharedComponent/LanguageSwitcher";
+import SocialLoginButtons from "../../../sharedComponent/SocialLoginButtons";
+import WhyJoinFeatures from "../../../sharedComponent/WhyJoinFeatures";
 import "./Login.css";
 
 export default function Login() {
@@ -16,8 +18,9 @@ export default function Login() {
     password: "",
   });
 
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => searchParams.get("error") || "");
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -58,14 +61,13 @@ export default function Login() {
         {/* Left: brand / illustration / features */}
         <div className="col-lg-6 left-side">
           <div className="brand-mark">
-            <span>
+            <Link to="/discussion" className="brand-mark-link">
               <img src={logoImage} className="logo" alt="Amarsa Vimarsa Logo" />
-            </span>
-
-            <span>
-              <span className="vaad">Amarsa</span>
-              <span className="samvaad"> Vimarsa</span>
-            </span>
+              <span>
+                <span className="vaad">Amarsa</span>
+                <span className="samvaad"> Vimarsa</span>
+              </span>
+            </Link>
           </div>
 
           <h1 className="hero-title">
@@ -77,60 +79,6 @@ export default function Login() {
           <div className="illustration-wrap">
             <img src={loginImage} alt="Login illustration" />
           </div>
-
-          <div className="feature-list">
-            <div className="feature-item">
-              <span className="feature-icon">
-                <i className="bi bi-chat-dots"></i>
-              </span>
-
-              <div>
-                <div className="feature-title">{t("meaningfulDiscussions")}</div>
-                <div className="feature-desc">
-                  {t("meaningfulDiscussionsDesc")}
-                </div>
-              </div>
-            </div>
-
-            <div className="feature-item">
-              <span className="feature-icon">
-                <i className="bi bi-megaphone"></i>
-              </span>
-
-              <div>
-                <div className="feature-title">{t("shareYourViews")}</div>
-                <div className="feature-desc">
-                  {t("shareYourViewsDesc")}
-                </div>
-              </div>
-            </div>
-
-            <div className="feature-item">
-              <span className="feature-icon">
-                <i className="bi bi-people"></i>
-              </span>
-
-              <div>
-                <div className="feature-title">{t("buildCommunity")}</div>
-                <div className="feature-desc">
-                  {t("buildCommunityDesc")}
-                </div>
-              </div>
-            </div>
-
-            <div className="feature-item">
-              <span className="feature-icon">
-                <i className="bi bi-shield-check"></i>
-              </span>
-
-              <div>
-                <div className="feature-title">{t("safeRespectful")}</div>
-                <div className="feature-desc">
-                  {t("safeRespectfulDesc")}
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right: Login form */}
@@ -141,7 +89,11 @@ export default function Login() {
 
           <p className="login-sub">{t("welcomeEnterDetails")}</p>
 
-          {error && <div className="alert alert-danger">{error}</div>}
+          {error && (
+            <div className="alert alert-danger" role="alert">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={submit}>
             <div className="mb-3">
@@ -180,6 +132,9 @@ export default function Login() {
                   required
                 />
               </div>
+              <div className="forgot-password-row">
+                <Link to="/forgot-password">{t("forgotPassword")}</Link>
+              </div>
             </div>
 
             <button
@@ -192,11 +147,14 @@ export default function Login() {
             </button>
           </form>
 
+          <SocialLoginButtons />
+
           <p className="register-line">
             {t("noAccount")} <Link to="/register">{t("registerNow")}</Link>
           </p>
         </div>
       </div>
+      <WhyJoinFeatures />
     </div>
   );
 }

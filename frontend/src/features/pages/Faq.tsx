@@ -11,6 +11,7 @@ const FAQ_ITEMS: { question: TranslationKey; answer: TranslationKey }[] = [
   { question: "faqQ5", answer: "faqA5" },
   { question: "faqQ6", answer: "faqA6" },
   { question: "faqQ7", answer: "faqA7" },
+  { question: "faqQ8", answer: "faqA8" },
 ];
 
 const Faq: FC = () => {

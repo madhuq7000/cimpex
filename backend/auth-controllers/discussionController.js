@@ -4,6 +4,7 @@ const Comment = require("../models/Comment");
 const {
   extractDiscussionDocument,
 } = require("../utils/extractDiscussionDocument");
+const { normalizeYoutubeUrl } = require("../utils/youtube");
 
 const getUploadedFile = (req, fieldName) => {
   if (req.files && req.files[fieldName] && req.files[fieldName][0]) {
@@ -32,7 +33,7 @@ const startDiscussion = async (req, res) => {
     console.log("Files:", req.files);
     console.log("User:", req.user);
 
-    const { title, description, categoryId } = req.body;
+    const { title, description, categoryId, youtubeUrl } = req.body;
 
     if (!title || !description || !categoryId) {
       return res.status(400).json({
@@ -52,6 +53,15 @@ const startDiscussion = async (req, res) => {
 
     const imageFile = getUploadedFile(req, "image");
     const videoFile = getUploadedFile(req, "video");
+    const documentFile = getUploadedFile(req, "document");
+    const normalizedYoutubeUrl = normalizeYoutubeUrl(youtubeUrl);
+
+    if (youtubeUrl && String(youtubeUrl).trim() && !normalizedYoutubeUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid YouTube video link",
+      });
+    }
 
     const discussion = await Discussion.create({
       title: title.trim(),
@@ -59,6 +69,9 @@ const startDiscussion = async (req, res) => {
       category: categoryId,
       image: getDiscussionMediaPath(imageFile),
       video: getDiscussionMediaPath(videoFile),
+      youtubeUrl: videoFile ? "" : normalizedYoutubeUrl,
+      document: getDiscussionMediaPath(documentFile),
+      documentName: documentFile ? documentFile.originalname : "",
       createdBy: req.user._id,
     });
 
@@ -219,6 +232,9 @@ const updateDiscussion = async (req, res) => {
       categoryId,
       removeImage,
       removeVideo,
+      removeYoutube,
+      youtubeUrl,
+      removeDocument,
     } = req.body;
 
     // ==========================================
@@ -291,6 +307,7 @@ const updateDiscussion = async (req, res) => {
 
     const imageFile = getUploadedFile(req, "image");
     const videoFile = getUploadedFile(req, "video");
+    const documentFile = getUploadedFile(req, "document");
 
     if (imageFile) {
       discussion.image = getDiscussionMediaPath(imageFile);
@@ -300,8 +317,33 @@ const updateDiscussion = async (req, res) => {
 
     if (videoFile) {
       discussion.video = getDiscussionMediaPath(videoFile);
+      discussion.youtubeUrl = "";
     } else if (removeVideo === "true") {
       discussion.video = "";
+    }
+
+    const normalizedYoutubeUrl = normalizeYoutubeUrl(youtubeUrl);
+
+    if (youtubeUrl && String(youtubeUrl).trim() && !normalizedYoutubeUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid YouTube video link",
+      });
+    }
+
+    if (!videoFile && normalizedYoutubeUrl) {
+      discussion.youtubeUrl = normalizedYoutubeUrl;
+      discussion.video = "";
+    } else if (removeYoutube === "true" && !videoFile) {
+      discussion.youtubeUrl = "";
+    }
+
+    if (documentFile) {
+      discussion.document = getDiscussionMediaPath(documentFile);
+      discussion.documentName = documentFile.originalname || "";
+    } else if (removeDocument === "true") {
+      discussion.document = "";
+      discussion.documentName = "";
     }
 
     await discussion.save();
@@ -350,6 +392,59 @@ const updateDiscussion = async (req, res) => {
 };
 
 // ==========================================
+// DELETE DISCUSSION
+// DELETE /api/discussions/:id
+// ==========================================
+const deleteDiscussion = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const discussion = await Discussion.findById(id);
+
+    if (!discussion) {
+      return res.status(404).json({
+        success: false,
+        message: "Discussion not found",
+      });
+    }
+
+    if (discussion.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to delete this discussion",
+      });
+    }
+
+    await Comment.updateMany(
+      { discussion: id },
+      { $set: { status: "deleted" } },
+    );
+
+    await Discussion.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Discussion and its comments were deleted",
+    });
+  } catch (error) {
+    console.error("Delete discussion error:", error);
+
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid discussion ID",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete discussion",
+      error: error.message,
+    });
+  }
+};
+
+// ==========================================
 // IMPORT DOCUMENT AND FILL DISCUSSION FORM
 // POST /api/discussions/import-document
 // ==========================================
@@ -362,7 +457,11 @@ const importDiscussionDocument = async (req, res) => {
       });
     }
 
-    const extracted = await extractDiscussionDocument(req.file);
+    const publicBase = `${String(req.headers["x-forwarded-proto"] || req.protocol || "http")
+      .split(",")[0]
+      .trim()}://${req.get("host")}`;
+
+    const extracted = await extractDiscussionDocument(req.file, publicBase);
 
     return res.status(200).json({
       success: true,
@@ -391,5 +490,6 @@ module.exports = {
   getDiscussions,
   getDiscussionById,
   updateDiscussion,
+  deleteDiscussion,
   importDiscussionDocument,
 };

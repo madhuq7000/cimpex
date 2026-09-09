@@ -10,8 +10,9 @@ const authRoutes = require("./routes/authRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const discussionRoutes = require("./routes/discussionRoutes");
 const commentRoutes = require("./routes/commentRoutes");
+const competitionRoutes = require("./routes/competitionRoutes");
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 connectDB();
 
@@ -20,8 +21,10 @@ const app = express();
 const defaultOrigins = [
   "http://localhost:5173",
   "http://localhost:4173",
-    "https://www.amarsavimarsa.com",
-    "https://amarsavimarsa.com",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:4173",
+  "https://www.amarsavimarsa.com",
+  "https://amarsavimarsa.com",
 ];
 
 const extraOrigins = String(process.env.CLIENT_URL || "")
@@ -31,10 +34,17 @@ const extraOrigins = String(process.env.CLIENT_URL || "")
 
 const allowedOrigins = [...new Set([...defaultOrigins, ...extraOrigins])];
 
+const isLocalBrowserOrigin = (origin) =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        isLocalBrowserOrigin(origin)
+      ) {
         callback(null, true);
         return;
       }
@@ -77,6 +87,8 @@ app.use("/api/discussions", discussionRoutes);
 // COMMENT ROUTES
 // ========================================
 app.use("/api/comments", commentRoutes);
+
+app.use("/api/competitions", competitionRoutes);
 
 // ========================================
 // TEST API

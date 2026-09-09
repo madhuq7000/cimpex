@@ -1,12 +1,12 @@
 
 
 :root {
-  --brand: #0b472e;
-  --brand-dark: #083322;
-  --brand-tint: #e7efe9;
-  --ink: #1f2430;
-  --muted: #6b7280;
-  --card-border: #eceef2;
+  --brand: #2e3094;
+  --brand-dark: #24267a;
+  --brand-tint: #E8E9F5;
+  --ink: #111827;
+  --muted: #6B7280;
+  --card-border: #E5E7EB;
 }
 
 /* =========================
@@ -19,15 +19,15 @@ body {
   background:
     radial-gradient(
       circle at 15% 10%,
-      rgba(13, 73, 48, 0.06),
+      rgba(46, 48, 148, 0.08),
       transparent 45%
     ),
     radial-gradient(
       circle at 85% 90%,
-      rgba(13, 73, 48, 0.06),
+      rgba(46, 48, 148, 0.08),
       transparent 45%
     ),
-    #f3f4f7;
+    #F9FAFB;
 
   min-height: 100vh;
   margin: 0;
@@ -56,26 +56,36 @@ a {
   display:flex;
   align-items:center;
   gap:6px;
-  background:#fff;
-  border:1px solid var(--card-border);
-  border-radius:999px;
-  padding:4px 10px 4px 12px;
-  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0.35rem 0.4rem;
+  color: #2e3094;
+  line-height: 1.3;
+  box-sizing: border-box;
+  box-shadow: none;
+}
+
+.language-switcher i{
+  font-size: 0.9rem;
+  line-height: 1.3;
+  color: #2e3094;
 }
 
 .language-switcher select{
   border:none;
   background:transparent;
-  font-size:13px;
+  font-size: 0.9rem;
   font-weight:600;
-  color: var(--ink);
+  line-height: 1.3;
+  color: #2e3094;
   cursor:pointer;
   outline:none;
 }
 
 .auth-panel {
   width: 100%;
-  min-height: 100vh;
+  min-height: auto;
   background: #fbfbfd;
   overflow: hidden;
 }
@@ -88,7 +98,8 @@ a {
   padding: 2.75rem 2.5rem !important;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 
 /* =========================
@@ -102,6 +113,14 @@ a {
 
   font-weight: 700;
   font-size: 1.15rem;
+}
+
+.brand-mark-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: inherit;
 }
 
 .brand-mark .logo {
@@ -169,18 +188,19 @@ a {
 
 .illustration-wrap {
   position: relative;
+  width: 100%;
 
-  margin: 2rem 0 1.75rem;
-  padding-bottom: 1.5rem;
+  margin: 1.25rem 0 0.75rem;
+  padding-bottom: 1rem;
 }
 
 .illustration-wrap img {
   width: 100%;
-  max-width: 520px;
+  max-width: 280px;
   height: auto;
 
   display: block;
-  margin: 0 auto;
+  margin: 0;
 }
 
 .illustration-wrap svg {
@@ -332,7 +352,7 @@ a {
   border: 1px solid var(--card-border);
   border-radius: 10px;
 
-  background: #fff;
+  background: transparent;
 
   transition:
     border-color 0.2s ease,
@@ -342,7 +362,7 @@ a {
 .input-group-custom:focus-within {
   border-color: var(--brand);
 
-  box-shadow: 0 0 0 3px rgba(13, 73, 48, 0.12);
+  box-shadow: 0 0 0 3px rgba(46, 48, 148, 0.12);
 }
 
 .input-group-custom .input-group-text {
@@ -494,6 +514,72 @@ a {
   transform: none;
 }
 
+.social-login {
+  margin-top: 1.1rem;
+}
+
+.social-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.85rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.social-login-divider::before,
+.social-login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--card-border);
+}
+
+.social-login-divider span {
+  white-space: nowrap;
+}
+
+.btn-social {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: #fff;
+  border: 1px solid var(--card-border);
+  color: var(--ink);
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+  margin-bottom: 0.55rem;
+}
+
+.btn-social svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.btn-social:hover {
+  border-color: #c7c9d9;
+  background: #f8f8fc;
+}
+
+.oauth-callback {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.oauth-callback-card {
+  max-width: 420px;
+  text-align: center;
+}
+
 /* =========================
    Error Message
 ========================= */
@@ -584,6 +670,23 @@ a {
    Register
 ========================= */
 
+.forgot-password-row {
+  text-align: right;
+  margin-top: 0.55rem;
+}
+
+.forgot-password-row a {
+  font-size: 0.85rem;
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.forgot-password-row a:hover {
+  color: var(--brand-dark);
+  text-decoration: underline;
+}
+
 .register-line {
   text-align: center;
 
@@ -645,10 +748,10 @@ a {
   }
 
   .illustration-wrap {
-    max-width: 600px;
+    max-width: 260px;
 
-    margin-left: auto;
-    margin-right: auto;
+    margin-left: 0;
+    margin-right: 0;
   }
 }
 
@@ -657,9 +760,29 @@ a {
 ========================= */
 
 @media (max-width: 575.98px) {
+  .auth-language {
+    top: 10px;
+    right: 10px;
+  }
+
+  .auth-language .language-switcher {
+    padding: 0.2rem 0.25rem;
+    border: none;
+    background: transparent;
+  }
+
+  .auth-language .language-switcher select {
+    max-width: 84px;
+    font-size: 0.78rem;
+  }
+
   .left-side,
   .right-side {
     padding: 2rem 1.25rem;
+  }
+
+  .left-side {
+    padding-top: 3.4rem;
   }
 
   .hero-title {

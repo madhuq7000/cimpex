@@ -9,6 +9,7 @@ const verifyToken = require("../middleware/verifyToken");
 const {
   addComment,
   getComments,
+  deleteComment,
 } = require("../auth-controllers/commentController");
 
 // ==========================================
@@ -31,5 +32,7 @@ router.post(
   verifyToken,
   addComment,
 );
+
+router.delete("/:commentId", verifyToken, deleteComment);
 
 module.exports = router;

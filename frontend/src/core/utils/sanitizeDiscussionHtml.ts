@@ -1,6 +1,6 @@
-import DOMPurify from "dompurify";
+import DOMPurify, { type Config as DomPurifyConfig } from "dompurify";
 
-const DISCUSSION_HTML_SANITIZE: DOMPurify.Config = {
+const DISCUSSION_HTML_SANITIZE: DomPurifyConfig = {
   ADD_TAGS: [
     "img",
     "h1",

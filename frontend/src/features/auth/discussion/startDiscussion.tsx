@@ -1230,7 +1230,7 @@ const StartDiscussion: React.FC = () => {
             ) : isEditMode ? (
               t("updateDiscussion")
             ) : (
-              t("startDiscussion")
+              t("submit")
             )}
           </button>
         </div>

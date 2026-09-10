@@ -88,7 +88,7 @@ const ResizableImage = Image.extend({
   addNodeView() {
     return ReactNodeViewRenderer(ResizableImageView, {
       className: "resizable-image-node",
-      stopEvent: (event) => {
+      stopEvent: ({ event }) => {
         const target = event.target as HTMLElement | null;
         return Boolean(
           target?.closest(

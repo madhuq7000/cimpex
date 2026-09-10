@@ -51,6 +51,7 @@ const DISCUSSION_HTML_SANITIZE: DomPurifyConfig = {
     "width",
     "height",
     "data-align",
+    "data-rotate",
   ],
 };
 

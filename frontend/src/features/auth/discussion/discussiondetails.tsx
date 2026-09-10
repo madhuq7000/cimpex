@@ -11,10 +11,7 @@ import {
   getProfileImageUrl,
   handleProfileImageError,
 } from "../../../core/utils/profileImage";
-import {
-  DEFAULT_DISCUSSION_IMAGE,
-  getDiscussionImageUrl,
-} from "../../../core/utils/mediaDefaults";
+import { getUploadedMediaUrl } from "../../../core/utils/mediaDefaults";
 import { downloadDiscussionPdf, downloadOriginalDocument } from "./downloadDiscussionPdf";
 import TranslatedContent from "../../../core/i18n/TranslatedContent";
 import VideoMedia from "../../../sharedComponent/VideoMedia";
@@ -786,36 +783,37 @@ const DiscussionDetails: React.FC = () => {
           </div>
         )}
 
-        {discussion.image ? (
-          <div className="hero-banner mb-1">
-            <img
-              src={getDiscussionImageUrl(discussion.image)}
-              alt={discussion.title}
-              onError={(event) => {
-                event.currentTarget.src = DEFAULT_DISCUSSION_IMAGE;
-              }}
-              style={{
-                width: "100%",
-                maxHeight: "450px",
-                objectFit: "cover",
-                borderRadius: "10px",
-              }}
-            />
-          </div>
-        ) : !discussion.video && !discussion.youtubeUrl ? (
-          <div className="hero-banner mb-1">
-            <img
-              src={DEFAULT_DISCUSSION_IMAGE}
-              alt={discussion.title}
-              style={{
-                width: "100%",
-                maxHeight: "450px",
-                objectFit: "cover",
-                borderRadius: "10px",
-              }}
-            />
-          </div>
-        ) : null}
+        {(() => {
+          const uploadedImage = getUploadedMediaUrl(discussion.image);
+          const isDefaultPlaceholder =
+            Boolean(discussion.image) &&
+            /default-discussion(\.png)?$/i.test(String(discussion.image));
+
+          if (!uploadedImage || isDefaultPlaceholder) {
+            return null;
+          }
+
+          return (
+            <div className="hero-banner mb-1">
+              <img
+                src={uploadedImage}
+                alt={discussion.title}
+                onError={(event) => {
+                  const banner = event.currentTarget.closest(".hero-banner");
+                  if (banner instanceof HTMLElement) {
+                    banner.style.display = "none";
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  maxHeight: "450px",
+                  objectFit: "cover",
+                  borderRadius: "10px",
+                }}
+              />
+            </div>
+          );
+        })()}
       </div>
 
       {/* ======================================

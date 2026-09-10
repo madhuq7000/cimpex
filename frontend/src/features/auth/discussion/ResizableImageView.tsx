@@ -19,6 +19,16 @@ const parseWidthPercent = (value?: string | null) => {
   return Math.min(MAX_PERCENT, Math.max(MIN_PERCENT, Math.round(numeric)));
 };
 
+const parseRotate = (value?: unknown) => {
+  const degrees = Number.parseInt(String(value ?? 0), 10);
+
+  if (degrees === 90 || degrees === 180 || degrees === 270) {
+    return degrees;
+  }
+
+  return 0;
+};
+
 const alignMarginStyle = (align: ImageAlign): CSSProperties => {
   if (align === "center") {
     return { marginLeft: "auto", marginRight: "auto" };
@@ -46,6 +56,7 @@ const ResizableImageView = ({
 
   const widthPercent = parseWidthPercent(node.attrs.width);
   const align = (node.attrs.align || "left") as ImageAlign;
+  const rotate = parseRotate(node.attrs.rotate);
 
   const setWidthPercent = (next: number) => {
     const clamped = Math.min(MAX_PERCENT, Math.max(MIN_PERCENT, Math.round(next)));
@@ -54,6 +65,10 @@ const ResizableImageView = ({
 
   const setAlign = (next: ImageAlign) => {
     updateAttributes({ align: next });
+  };
+
+  const rotateBy = (delta: number) => {
+    updateAttributes({ rotate: (rotate + delta + 360) % 360 });
   };
 
   const onPointerDown = (event: ReactPointerEvent<HTMLSpanElement>) => {
@@ -121,6 +136,7 @@ const ResizableImageView = ({
       as="div"
       className={`resizable-image is-align-${align}${selected ? " is-selected" : ""}`}
       data-align={align}
+      data-rotate={rotate || undefined}
       draggable={false}
       ref={wrapperRef}
       style={{
@@ -154,7 +170,15 @@ const ResizableImageView = ({
         title={node.attrs.title || ""}
         draggable={false}
         data-align={align}
-        style={{ width: "100%", height: "auto", maxWidth: "100%", display: "block" }}
+        data-rotate={rotate || undefined}
+        style={{
+          width: "100%",
+          height: "auto",
+          maxWidth: "100%",
+          display: "block",
+          transform: rotate ? `rotate(${rotate}deg)` : undefined,
+          transformOrigin: "center center",
+        }}
       />
 
       {editor.isEditable ? (
@@ -195,6 +219,30 @@ const ResizableImageView = ({
               }}
             >
               <i className="bi bi-text-right"></i>
+            </button>
+            <button
+              type="button"
+              className="resizable-image-rotate"
+              title="Rotate left"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                rotateBy(-90);
+              }}
+            >
+              <i className="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <button
+              type="button"
+              className="resizable-image-rotate"
+              title="Rotate right"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                rotateBy(90);
+              }}
+            >
+              <i className="bi bi-arrow-clockwise"></i>
             </button>
             <button
               type="button"

@@ -3,6 +3,16 @@ import { ReactNodeViewRenderer } from "@tiptap/react";
 
 import ResizableImageView from "./ResizableImageView";
 
+const NORMALIZE_ROTATE = (value: unknown) => {
+  const degrees = Number.parseInt(String(value ?? 0), 10);
+
+  if (degrees === 90 || degrees === 180 || degrees === 270) {
+    return degrees;
+  }
+
+  return 0;
+};
+
 const ResizableImage = Image.extend({
   name: "image",
   draggable: true,
@@ -68,6 +78,7 @@ const ResizableImage = Image.extend({
           const align = attributes.align || "left";
           const width = String(attributes.width || "60%");
           const cssWidth = /^\d+$/.test(width) ? `${width}px` : width;
+          const rotate = NORMALIZE_ROTATE(attributes.rotate);
 
           let margin = "margin-left: 0; margin-right: auto;";
           if (align === "center") {
@@ -76,9 +87,42 @@ const ResizableImage = Image.extend({
             margin = "margin-left: auto; margin-right: 0;";
           }
 
+          const transform = rotate ? ` transform: rotate(${rotate}deg);` : "";
+
           return {
             "data-align": align,
-            style: `display: block; width: ${cssWidth}; height: auto; max-width: 100%; ${margin}`,
+            style: `display: block; width: ${cssWidth}; height: auto; max-width: 100%; ${margin}${transform}`,
+          };
+        },
+      },
+      rotate: {
+        default: 0,
+        parseHTML: (element) => {
+          const dataRotate = element.getAttribute("data-rotate");
+
+          if (dataRotate != null) {
+            return NORMALIZE_ROTATE(dataRotate);
+          }
+
+          const style = element.getAttribute("style") || "";
+          const match = style.match(/rotate\(\s*(-?\d+(?:\.\d+)?)deg\s*\)/i);
+
+          if (match) {
+            const normalized = ((Number.parseFloat(match[1]) % 360) + 360) % 360;
+            return NORMALIZE_ROTATE(Math.round(normalized / 90) * 90);
+          }
+
+          return 0;
+        },
+        renderHTML: (attributes) => {
+          const rotate = NORMALIZE_ROTATE(attributes.rotate);
+
+          if (!rotate) {
+            return {};
+          }
+
+          return {
+            "data-rotate": String(rotate),
           };
         },
       },
@@ -92,7 +136,7 @@ const ResizableImage = Image.extend({
         const target = event.target as HTMLElement | null;
         return Boolean(
           target?.closest(
-            ".resizable-image-toolbar, .resizable-image-handle, .resizable-image-size, .resizable-image-delete, .resizable-image-align",
+            ".resizable-image-toolbar, .resizable-image-handle, .resizable-image-size, .resizable-image-delete, .resizable-image-align, .resizable-image-rotate",
           ),
         );
       },

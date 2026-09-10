@@ -310,7 +310,8 @@ select:-webkit-autofill:focus {
 
 .resizable-image-size,
 .resizable-image-delete,
-.resizable-image-align {
+.resizable-image-align,
+.resizable-image-rotate {
   width: 36px;
   height: 36px;
   border: none;
@@ -326,8 +327,33 @@ select:-webkit-autofill:focus {
 }
 
 .resizable-image-size,
-.resizable-image-align {
+.resizable-image-align,
+.resizable-image-rotate {
   background: #2e3094;
+}
+
+.resizable-image-rotate i {
+  font-size: 1rem;
+}
+
+.discussion-description img[data-rotate],
+.card-desc img[data-rotate] {
+  transform-origin: center center;
+}
+
+.discussion-description img[data-rotate="90"],
+.card-desc img[data-rotate="90"] {
+  transform: rotate(90deg);
+}
+
+.discussion-description img[data-rotate="180"],
+.card-desc img[data-rotate="180"] {
+  transform: rotate(180deg);
+}
+
+.discussion-description img[data-rotate="270"],
+.card-desc img[data-rotate="270"] {
+  transform: rotate(270deg);
 }
 
 .resizable-image-align.is-active {

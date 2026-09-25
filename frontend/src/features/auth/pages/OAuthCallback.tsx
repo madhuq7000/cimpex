@@ -4,6 +4,10 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { getMeApi } from "../authApi";
 import { useAuth } from "../../../core/context/AuthContext";
 import { useLanguage } from "../../../core/context/LanguageContext";
+import {
+  AUTH_RETURN_TO_KEY,
+  getSafeReturnPath,
+} from "../../../core/utils/authReturn";
 import "./Login.css";
 
 export default function OAuthCallback() {
@@ -25,15 +29,20 @@ export default function OAuthCallback() {
 
     const completeLogin = async () => {
       try {
-        login(token);
+        localStorage.setItem("token", token);
         const res = await getMeApi();
 
         if (cancelled) {
           return;
         }
 
-        localStorage.setItem("user", JSON.stringify(res.data.user));
-        navigate("/discussion", { replace: true });
+        login(token, res.data.user);
+
+        const nextPath =
+          getSafeReturnPath(sessionStorage.getItem(AUTH_RETURN_TO_KEY)) ||
+          "/discussion";
+        sessionStorage.removeItem(AUTH_RETURN_TO_KEY);
+        navigate(nextPath, { replace: true });
       } catch {
         if (!cancelled) {
           setError(t("oauthFailed"));

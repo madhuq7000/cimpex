@@ -1,6 +1,7 @@
 const Discussion = require("../models/Discussion");
 const Category = require("../models/Category");
 const Comment = require("../models/Comment");
+const { isSuperAdminUser } = require("../utils/superAdmin");
 const {
   extractDiscussionDocument,
 } = require("../utils/extractDiscussionDocument");
@@ -252,12 +253,12 @@ const updateDiscussion = async (req, res) => {
     }
 
     // ==========================================
-    // CHECK OWNER
+    // CHECK OWNER OR SUPER ADMIN
     // ==========================================
 
     if (
-      discussion.createdBy.toString() !==
-      req.user._id.toString()
+      discussion.createdBy.toString() !== req.user._id.toString() &&
+      !isSuperAdminUser(req.user)
     ) {
       return res.status(403).json({
         success: false,
@@ -408,7 +409,10 @@ const deleteDiscussion = async (req, res) => {
       });
     }
 
-    if (discussion.createdBy.toString() !== req.user._id.toString()) {
+    if (
+      discussion.createdBy.toString() !== req.user._id.toString() &&
+      !isSuperAdminUser(req.user)
+    ) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to delete this discussion",
@@ -457,11 +461,16 @@ const importDiscussionDocument = async (req, res) => {
       });
     }
 
-    const publicBase = `${String(req.headers["x-forwarded-proto"] || req.protocol || "http")
-      .split(",")[0]
-      .trim()}://${req.get("host")}`;
+    console.log("Import document request:", {
+      name: req.file.originalname,
+      mime: req.file.mimetype,
+      size: req.file.size || req.file.buffer?.length || 0,
+      host: req.get("host"),
+    });
 
-    const extracted = await extractDiscussionDocument(req.file, publicBase);
+    // Image srcs are relative (/api/uploads/...). Do not pass proxy host —
+    // live nginx often reports 127.0.0.1:3000 which breaks browser image loads.
+    const extracted = await extractDiscussionDocument(req.file, "");
 
     return res.status(200).json({
       success: true,
@@ -469,14 +478,21 @@ const importDiscussionDocument = async (req, res) => {
       data: extracted,
     });
   } catch (error) {
-    console.error("Import discussion document error:", error);
+    console.error("Import discussion document error:", {
+      message: error.message,
+      stack: error.stack,
+      name: req.file?.originalname,
+      mime: req.file?.mimetype,
+      size: req.file?.size || req.file?.buffer?.length || 0,
+    });
 
     const statusCode = error.statusCode || 500;
 
     return res.status(statusCode).json({
       success: false,
       message:
-        error.message || "Failed to read text from this document",
+        error.message ||
+        "Failed to read text from this document. Please try again or enter the text manually.",
     });
   }
 };

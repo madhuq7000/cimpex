@@ -1,5 +1,4 @@
-// features/auth/pages/Login.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { loginApi } from "../authApi";
 import { useAuth } from "../../../core/context/AuthContext";
@@ -10,6 +9,10 @@ import logoImage from "../../../assets/images/logo.png";
 import LanguageSwitcher from "../../../sharedComponent/LanguageSwitcher";
 import SocialLoginButtons from "../../../sharedComponent/SocialLoginButtons";
 import WhyJoinFeatures from "../../../sharedComponent/WhyJoinFeatures";
+import {
+  AUTH_RETURN_TO_KEY,
+  getSafeReturnPath,
+} from "../../../core/utils/authReturn";
 import "./Login.css";
 
 export default function Login() {
@@ -26,6 +29,18 @@ export default function Login() {
   const { login } = useAuth();
   const { t } = useLanguage();
 
+  const isParticipateMode = searchParams.get("mode") === "participate";
+  const returnTo =
+    getSafeReturnPath(searchParams.get("next")) ||
+    getSafeReturnPath(sessionStorage.getItem(AUTH_RETURN_TO_KEY));
+
+  useEffect(() => {
+    const nextPath = getSafeReturnPath(searchParams.get("next"));
+    if (nextPath) {
+      sessionStorage.setItem(AUTH_RETURN_TO_KEY, nextPath);
+    }
+  }, [searchParams]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -33,18 +48,23 @@ export default function Login() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isParticipateMode) {
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
 
       const res = await loginApi(form);
 
-      console.log("Login response>>>>:", res.data);
+      login(res.data.token, res.data.user);
 
-      login(res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-
-      navigate("/discussion");
+      const nextPath =
+        getSafeReturnPath(sessionStorage.getItem(AUTH_RETURN_TO_KEY)) ||
+        "/discussion";
+      sessionStorage.removeItem(AUTH_RETURN_TO_KEY);
+      navigate(nextPath);
     } catch (err: any) {
       setError(err.response?.data?.message || t("loginFailed"));
     } finally {
@@ -58,7 +78,6 @@ export default function Login() {
         <LanguageSwitcher />
       </div>
       <div className="auth-panel row g-0">
-        {/* Left: brand / illustration / features */}
         <div className="col-lg-6 left-side">
           <div className="brand-mark">
             <Link to="/discussion" className="brand-mark-link">
@@ -71,23 +90,46 @@ export default function Login() {
           </div>
 
           <h1 className="hero-title">
-            {t("welcomeBack")} <span className="accent">{t("back")}</span>
+            {isParticipateMode ? (
+              <>
+                {t("participateLoginTitle")}{" "}
+                <span className="accent">{t("participate")}</span>
+              </>
+            ) : (
+              <>
+                {t("welcomeBack")} <span className="accent">{t("back")}</span>
+              </>
+            )}
           </h1>
 
-          <p className="hero-copy">{t("loginHero")}</p>
+          <p className="hero-copy">
+            {isParticipateMode ? t("participateLoginHero") : t("loginHero")}
+          </p>
 
           <div className="illustration-wrap">
             <img src={loginImage} alt="Login illustration" />
           </div>
         </div>
 
-        {/* Right: Login form */}
         <div className="col-lg-6 right-side">
           <h2 className="login-title">
-            {t("loginToVaad")} <span className="accent">Amarsa Vimarsa</span>
+            {isParticipateMode ? (
+              <>
+                {t("participateToContinue")}{" "}
+                <span className="accent">Amarsa Vimarsa</span>
+              </>
+            ) : (
+              <>
+                {t("loginToVaad")} <span className="accent">Amarsa Vimarsa</span>
+              </>
+            )}
           </h2>
 
-          <p className="login-sub">{t("welcomeEnterDetails")}</p>
+          <p className="login-sub">
+            {isParticipateMode
+              ? t("participateLoginSub")
+              : t("welcomeEnterDetails")}
+          </p>
 
           {error && (
             <div className="alert alert-danger" role="alert">
@@ -95,63 +137,70 @@ export default function Login() {
             </div>
           )}
 
-          <form onSubmit={submit}>
-            <div className="mb-3">
-              <label className="field-label">{t("emailAddress")}</label>
-              <div className="input-group input-group-custom px-2">
-                <span className="input-group-text">
-                  <i className="bi bi-envelope"></i>
-                </span>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  className="form-control"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder={t("enterEmail")}
-                  required
-                />
+          {!isParticipateMode ? (
+            <form onSubmit={submit}>
+              <div className="mb-3">
+                <label className="field-label">{t("emailAddress")}</label>
+                <div className="input-group input-group-custom px-2">
+                  <span className="input-group-text">
+                    <i className="bi bi-envelope"></i>
+                  </span>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    className="form-control"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder={t("enterEmail")}
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="mb-3">
-              <label className="field-label">{t("password")}</label>
-              <div className="input-group input-group-custom px-2">
-                <span className="input-group-text">
-                  <i className="bi bi-lock"></i>
-                </span>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  className="form-control"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder={t("enterPassword")}
-                  required
-                />
+              <div className="mb-3">
+                <label className="field-label">{t("password")}</label>
+                <div className="input-group input-group-custom px-2">
+                  <span className="input-group-text">
+                    <i className="bi bi-lock"></i>
+                  </span>
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    className="form-control"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder={t("enterPassword")}
+                    required
+                  />
+                </div>
+                <div className="forgot-password-row">
+                  <Link to="/forgot-password">{t("forgotPassword")}</Link>
+                </div>
               </div>
-              <div className="forgot-password-row">
-                <Link to="/forgot-password">{t("forgotPassword")}</Link>
-              </div>
-            </div>
 
-            <button
-              type="submit"
-              className="btn-login w-100 d-flex align-items-center justify-content-center gap-2"
-              disabled={loading}
-            >
-              {loading ? t("loggingIn") : t("login")}
-              <i className="bi bi-arrow-right"></i>
-            </button>
-          </form>
+              <button
+                type="submit"
+                className="btn-login w-100 d-flex align-items-center justify-content-center gap-2"
+                disabled={loading}
+              >
+                {loading ? t("loggingIn") : t("login")}
+                <i className="bi bi-arrow-right"></i>
+              </button>
+            </form>
+          ) : null}
 
-          <SocialLoginButtons />
+          <SocialLoginButtons
+            hideDivider={isParticipateMode}
+            returnTo={returnTo || undefined}
+          />
 
-          <p className="register-line">
-            {t("noAccount")} <Link to="/register">{t("registerNow")}</Link>
-          </p>
+          {!isParticipateMode ? (
+            <p className="register-line">
+              {t("noAccount")} <Link to="/register">{t("registerNow")}</Link>
+            </p>
+          ) : null}
         </div>
       </div>
       <WhyJoinFeatures />

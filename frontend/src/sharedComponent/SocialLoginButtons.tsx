@@ -1,19 +1,43 @@
 import { API_URL } from "../core/config/env";
 import { useLanguage } from "../core/context/LanguageContext";
+import {
+  AUTH_RETURN_TO_KEY,
+  getSafeReturnPath,
+} from "../core/utils/authReturn";
 
-export default function SocialLoginButtons() {
+interface SocialLoginButtonsProps {
+  hideDivider?: boolean;
+  returnTo?: string;
+}
+
+export default function SocialLoginButtons({
+  hideDivider = false,
+  returnTo,
+}: SocialLoginButtonsProps) {
   const { t } = useLanguage();
 
   const startSocialLogin = (provider: "google" | "facebook") => {
+    const safeReturnTo = getSafeReturnPath(returnTo || null);
+
+    if (safeReturnTo) {
+      sessionStorage.setItem(AUTH_RETURN_TO_KEY, safeReturnTo);
+    }
+
     const redirect = encodeURIComponent(window.location.origin);
     window.location.href = `${API_URL}/auth/${provider}?redirect=${redirect}`;
   };
 
   return (
     <div className="social-login">
-      <p className="social-login-divider">
-        <span>{t("orContinueWith")}</span>
-      </p>
+      {!hideDivider ? (
+        <p className="social-login-divider">
+          <span>{t("orContinueWith")}</span>
+        </p>
+      ) : (
+        <p className="social-login-divider">
+          <span>{t("continueWithSocial")}</span>
+        </p>
+      )}
       <button
         type="button"
         className="btn-social btn-social-google"

@@ -19,8 +19,7 @@ import CompetitionDetails from "../features/auth/competition/competitionDetails"
 import StartCompetition from "../features/auth/competition/startCompetition";
 import Faq from "../features/pages/Faq";
 import CommunityGuidelines from "../features/pages/CommunityGuidelines";
-
-const Dashboard = () => <h1>Dashboard</h1>;
+import Dashboard from "../features/auth/pages/Dashboard";
 
 export default function AppRouter() {
   return (
@@ -61,6 +60,15 @@ export default function AppRouter() {
           <Route path="/discussion/:id" element={<DiscussionDetails />} />
 
           <Route path="/competitions" element={<CompetitionList />} />
+
+          <Route
+            path="/competitions/edit/:id"
+            element={
+              <ProtectedRoute>
+                <StartCompetition />
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="/competitions/:id" element={<CompetitionDetails />} />
 

@@ -12,10 +12,12 @@ import {
   handleProfileImageError,
 } from "../../../core/utils/profileImage";
 import { getUploadedMediaUrl } from "../../../core/utils/mediaDefaults";
+import { isSuperAdminEmail } from "../../../core/utils/superAdmin";
 import { downloadDiscussionPdf, downloadOriginalDocument } from "./downloadDiscussionPdf";
 import TranslatedContent from "../../../core/i18n/TranslatedContent";
 import VideoMedia from "../../../sharedComponent/VideoMedia";
 import ShareMenu from "../../../sharedComponent/ShareMenu";
+import ConfirmModal from "../../../sharedComponent/ConfirmModal";
 
 // ==========================================
 // DISCUSSION
@@ -157,13 +159,20 @@ const DiscussionDetails: React.FC = () => {
 
   const [deletingCommentId, setDeletingCommentId] = useState<string>("");
 
+  const [deleteTarget, setDeleteTarget] = useState<
+    null | { type: "discussion" } | { type: "comment"; id: string }
+  >(null);
+
   const currentUserId = String(loggedInUser?.id || loggedInUser?._id || "");
+  const isSuperAdmin = isSuperAdminEmail(loggedInUser?.email);
 
   const isDiscussionOwner = Boolean(
     currentUserId &&
       discussion?.createdBy?._id &&
       String(discussion.createdBy._id) === currentUserId,
   );
+  const canDeleteDiscussion = isDiscussionOwner || isSuperAdmin;
+  const canModerateComments = isDiscussionOwner || isSuperAdmin;
 
   // ==========================================
   // GET DISCUSSION DETAILS
@@ -385,10 +394,6 @@ const DiscussionDetails: React.FC = () => {
       return;
     }
 
-    if (!window.confirm(t("deleteDiscussionConfirm"))) {
-      return;
-    }
-
     try {
       setDeletingDiscussion(true);
       setError("");
@@ -397,6 +402,7 @@ const DiscussionDetails: React.FC = () => {
 
       if (!token) {
         setError(t("pleaseLoginToComment"));
+        setDeleteTarget(null);
         return;
       }
 
@@ -406,11 +412,13 @@ const DiscussionDetails: React.FC = () => {
         },
       });
 
+      setDeleteTarget(null);
       navigate("/discussion", { replace: true });
     } catch (deleteError: any) {
       setError(
         deleteError.response?.data?.message || t("failedDeleteDiscussion"),
       );
+      setDeleteTarget(null);
     } finally {
       setDeletingDiscussion(false);
     }
@@ -418,10 +426,6 @@ const DiscussionDetails: React.FC = () => {
 
   const handleDeleteComment = async (commentId: string) => {
     if (!commentId || deletingCommentId) {
-      return;
-    }
-
-    if (!window.confirm(t("deleteCommentConfirm"))) {
       return;
     }
 
@@ -433,6 +437,7 @@ const DiscussionDetails: React.FC = () => {
 
       if (!token) {
         setCommentError(t("pleaseLoginToComment"));
+        setDeleteTarget(null);
         return;
       }
 
@@ -443,10 +448,12 @@ const DiscussionDetails: React.FC = () => {
       });
 
       setComments((prev) => prev.filter((item) => item._id !== commentId));
+      setDeleteTarget(null);
     } catch (deleteError: any) {
       setCommentError(
         deleteError.response?.data?.message || t("failedDeleteComment"),
       );
+      setDeleteTarget(null);
     } finally {
       setDeletingCommentId("");
     }
@@ -631,7 +638,7 @@ const DiscussionDetails: React.FC = () => {
             EDIT / DELETE
         ==================================== */}
 
-        {isAuthenticated && isDiscussionOwner && (
+        {isAuthenticated && (isDiscussionOwner || isSuperAdmin) && (
           <>
             &nbsp;&nbsp;
             <span
@@ -643,6 +650,10 @@ const DiscussionDetails: React.FC = () => {
             >
               {t("edit")}
             </span>
+          </>
+        )}
+        {isAuthenticated && canDeleteDiscussion && (
+          <>
             &nbsp;&nbsp;
             <span
               className="badge-tech d-inline-block mb-3"
@@ -652,7 +663,7 @@ const DiscussionDetails: React.FC = () => {
               }}
               onClick={() => {
                 if (!deletingDiscussion) {
-                  void handleDeleteDiscussion();
+                  setDeleteTarget({ type: "discussion" });
                 }
               }}
             >
@@ -900,13 +911,15 @@ const DiscussionDetails: React.FC = () => {
                   </div>
 
                   {isAuthenticated &&
-                    (isDiscussionOwner ||
+                    (canModerateComments ||
                       String(comment.createdBy?._id || "") === currentUserId) && (
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-danger"
                         disabled={deletingCommentId === comment._id}
-                        onClick={() => void handleDeleteComment(comment._id)}
+                        onClick={() =>
+                          setDeleteTarget({ type: "comment", id: comment._id })
+                        }
                       >
                         {deletingCommentId === comment._id
                           ? t("deleting")
@@ -973,6 +986,39 @@ const DiscussionDetails: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        show={Boolean(deleteTarget)}
+        title={
+          deleteTarget?.type === "comment"
+            ? t("deleteComment")
+            : t("deleteDiscussion")
+        }
+        message={
+          deleteTarget?.type === "comment"
+            ? t("deleteCommentConfirm")
+            : t("deleteDiscussionConfirm")
+        }
+        confirmLabel={t("delete")}
+        cancelLabel={t("cancel")}
+        confirming={
+          deleteTarget?.type === "discussion"
+            ? deletingDiscussion
+            : Boolean(deletingCommentId)
+        }
+        onCancel={() => {
+          if (!deletingDiscussion && !deletingCommentId) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={() => {
+          if (deleteTarget?.type === "discussion") {
+            void handleDeleteDiscussion();
+          } else if (deleteTarget?.type === "comment") {
+            void handleDeleteComment(deleteTarget.id);
+          }
+        }}
+      />
     </div>
   );
 };

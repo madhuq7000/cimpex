@@ -7,26 +7,118 @@ const User = require("../models/User");
 const createToken = (userId) =>
   jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-const backendBase = (req) => {
-  const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "http")
-    .split(",")[0]
-    .trim();
-  const host = req.get("host");
-  return `${proto}://${host}`;
+const LOCAL_API_ORIGIN = () => `http://localhost:${process.env.PORT || 3000}`;
+const LOCAL_FRONTEND_ORIGIN = "http://localhost:5173";
+const PRODUCTION_API_ORIGIN = "https://www.amarsavimarsa.com";
+const PRODUCTION_FRONTEND_ORIGIN = "https://www.amarsavimarsa.com";
+
+const isLoopbackHost = (host = "") =>
+  /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(String(host).trim());
+
+const tryParseOrigin = (value = "") => {
+  try {
+    return new URL(String(value)).origin;
+  } catch {
+    return "";
+  }
 };
 
-const allowedFrontendOrigins = () => {
-  const extras = String(process.env.CLIENT_URL || "")
+const envOrigins = (key) =>
+  String(process.env[key] || "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+const productionApiOrigin = () => {
+  const fromEnv = envOrigins("PUBLIC_API_URL")
+    .concat(envOrigins("PUBLIC_SERVER_URL"))
+    .map(tryParseOrigin)
+    .find((origin) => origin && !isLoopbackHost(new URL(origin).host));
+
+  return fromEnv || PRODUCTION_API_ORIGIN;
+};
+
+const localApiOrigin = () => {
+  const fromEnv = envOrigins("LOCAL_PUBLIC_API_URL")
+    .map(tryParseOrigin)
+    .find(Boolean);
+
+  return fromEnv || LOCAL_API_ORIGIN();
+};
+
+/**
+ * Decide local vs live from the browser that started OAuth.
+ * SocialLoginButtons always sends ?redirect=window.location.origin
+ */
+const isLocalOAuthRequest = (req, frontendOrigin = "") => {
+  const candidates = [
+    frontendOrigin,
+    req.query?.redirect,
+    req.get("origin"),
+    req.get("referer"),
+  ];
+
+  for (const value of candidates) {
+    const origin = tryParseOrigin(value);
+    if (origin && isLoopbackHost(new URL(origin).host)) {
+      return true;
+    }
+  }
+
+  const host = String(req.headers["x-forwarded-host"] || req.get("host") || "")
+    .split(",")[0]
+    .trim();
+
+  // Pure local Node (no nginx): host is localhost and no production frontend hint.
+  if (isLoopbackHost(host)) {
+    const hasProductionHint = candidates.some((value) =>
+      /amarsavimarsa\.com/i.test(String(value || "")),
+    );
+    return !hasProductionHint;
+  }
+
+  return false;
+};
+
+/**
+ * OAuth redirect_uri API origin — picks localhost on local, live URL on server.
+ * PUBLIC_API_URL can stay set to production; local logins still use localhost.
+ */
+const backendBase = (req, frontendOrigin = "") => {
+  if (isLocalOAuthRequest(req, frontendOrigin)) {
+    return localApiOrigin();
+  }
+
+  const forwardedHost = String(req.headers["x-forwarded-host"] || "")
+    .split(",")[0]
+    .trim();
+  const host = forwardedHost || String(req.get("host") || "").trim();
+
+  if (host && !isLoopbackHost(host)) {
+    let proto = String(req.headers["x-forwarded-proto"] || req.protocol || "https")
+      .split(",")[0]
+      .trim()
+      .toLowerCase();
+
+    if (proto === "http") {
+      proto = "https";
+    }
+
+    return `${proto}://${host}`;
+  }
+
+  return productionApiOrigin();
+};
+
+const allowedFrontendOrigins = () => {
+  const extras = envOrigins("CLIENT_URL");
+
   return new Set([
-    "http://localhost:5173",
+    LOCAL_FRONTEND_ORIGIN,
     "http://localhost:4173",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:4173",
-    "https://www.amarsavimarsa.com",
+    PRODUCTION_FRONTEND_ORIGIN,
     "https://amarsavimarsa.com",
     ...extras,
   ]);
@@ -49,13 +141,29 @@ const isAllowedFrontend = (origin) => {
   }
 };
 
-const defaultFrontend = () => {
-  const fromEnv = String(process.env.CLIENT_URL || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .find(Boolean);
+const defaultFrontend = (req) => {
+  const configured = envOrigins("CLIENT_URL");
 
-  return fromEnv || "http://localhost:5173";
+  if (isLocalOAuthRequest(req)) {
+    const local = configured.find((origin) => {
+      try {
+        return isLoopbackHost(new URL(origin).host);
+      } catch {
+        return false;
+      }
+    });
+    return local || LOCAL_FRONTEND_ORIGIN;
+  }
+
+  const live = configured.find((origin) => {
+    try {
+      return !isLoopbackHost(new URL(origin).host);
+    } catch {
+      return false;
+    }
+  });
+
+  return live || PRODUCTION_FRONTEND_ORIGIN;
 };
 
 const encodeState = (payload) =>
@@ -69,9 +177,14 @@ const decodeState = (state) => {
   }
 };
 
-const frontendFromState = (state) => {
+const frontendFromState = (state, req) => {
   const origin = decodeState(state).redirect;
-  return isAllowedFrontend(origin) ? origin : defaultFrontend();
+  return isAllowedFrontend(origin) ? origin : defaultFrontend(req);
+};
+
+const redirectUriFromState = (state, fallback) => {
+  const fromState = String(decodeState(state).redirectUri || "").trim();
+  return fromState || fallback;
 };
 
 const redirectWithError = (res, frontend, message) => {
@@ -119,28 +232,27 @@ const upsertSocialUser = async ({
       googleId: googleId || undefined,
       facebookId: facebookId || undefined,
     });
+  } else {
+    if (googleId && !user.googleId) {
+      user.googleId = googleId;
+    }
 
-    return user;
+    if (facebookId && !user.facebookId) {
+      user.facebookId = facebookId;
+    }
+
+    if (picture && (!user.profileImage || user.profileImage === "default-profile.png")) {
+      user.profileImage = picture;
+    }
+
+    await user.save();
   }
 
-  if (googleId && !user.googleId) {
-    user.googleId = googleId;
-  }
-
-  if (facebookId && !user.facebookId) {
-    user.facebookId = facebookId;
-  }
-
-  if ((!user.profileImage || user.profileImage === "default-profile.png") && picture) {
-    user.profileImage = picture;
-  }
-
-  await user.save();
   return user;
 };
 
 const finishLogin = (res, frontend, user) => {
-  if (user.isActive === false) {
+  if (user.status && user.status !== "active") {
     return redirectWithError(res, frontend, "This account is inactive.");
   }
 
@@ -154,7 +266,7 @@ const startGoogle = (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const frontend = isAllowedFrontend(req.query.redirect)
     ? String(req.query.redirect)
-    : defaultFrontend();
+    : defaultFrontend(req);
 
   if (!clientId || !process.env.GOOGLE_CLIENT_SECRET) {
     return redirectWithError(
@@ -164,14 +276,17 @@ const startGoogle = (req, res) => {
     );
   }
 
+  const redirectUri = `${backendBase(req, frontend)}/api/auth/google/callback`;
+  console.log("Google OAuth start redirect_uri:", redirectUri, "frontend:", frontend);
+
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: `${backendBase(req)}/api/auth/google/callback`,
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: "openid email profile",
     access_type: "online",
     prompt: "select_account",
-    state: encodeState({ redirect: frontend }),
+    state: encodeState({ redirect: frontend, redirectUri }),
   });
 
   return res.redirect(
@@ -180,7 +295,12 @@ const startGoogle = (req, res) => {
 };
 
 const googleCallback = async (req, res) => {
-  const frontend = frontendFromState(req.query.state);
+  const state = req.query.state;
+  const frontend = frontendFromState(state, req);
+  const redirectUri = redirectUriFromState(
+    state,
+    `${backendBase(req, frontend)}/api/auth/google/callback`,
+  );
 
   try {
     if (req.query.error) {
@@ -200,7 +320,7 @@ const googleCallback = async (req, res) => {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: `${backendBase(req)}/api/auth/google/callback`,
+        redirect_uri: redirectUri,
         grant_type: "authorization_code",
       }),
     });
@@ -208,6 +328,7 @@ const googleCallback = async (req, res) => {
     const tokenData = await tokenResponse.json();
 
     if (!tokenData.access_token) {
+      console.error("Google token exchange failed:", tokenData);
       return redirectWithError(res, frontend, "Google token exchange failed.");
     }
 
@@ -239,7 +360,7 @@ const startFacebook = (req, res) => {
   const appId = process.env.FACEBOOK_APP_ID;
   const frontend = isAllowedFrontend(req.query.redirect)
     ? String(req.query.redirect)
-    : defaultFrontend();
+    : defaultFrontend(req);
 
   if (!appId || !process.env.FACEBOOK_APP_SECRET) {
     return redirectWithError(
@@ -249,11 +370,14 @@ const startFacebook = (req, res) => {
     );
   }
 
+  const redirectUri = `${backendBase(req, frontend)}/api/auth/facebook/callback`;
+  console.log("Facebook OAuth start redirect_uri:", redirectUri, "frontend:", frontend);
+
   const params = new URLSearchParams({
     client_id: appId,
-    redirect_uri: `${backendBase(req)}/api/auth/facebook/callback`,
+    redirect_uri: redirectUri,
     scope: "email,public_profile",
-    state: encodeState({ redirect: frontend }),
+    state: encodeState({ redirect: frontend, redirectUri }),
   });
 
   return res.redirect(
@@ -262,7 +386,12 @@ const startFacebook = (req, res) => {
 };
 
 const facebookCallback = async (req, res) => {
-  const frontend = frontendFromState(req.query.state);
+  const state = req.query.state;
+  const frontend = frontendFromState(state, req);
+  const redirectUri = redirectUriFromState(
+    state,
+    `${backendBase(req, frontend)}/api/auth/facebook/callback`,
+  );
 
   try {
     if (req.query.error) {
@@ -279,7 +408,6 @@ const facebookCallback = async (req, res) => {
       );
     }
 
-    const redirectUri = `${backendBase(req)}/api/auth/facebook/callback`;
     const tokenParams = new URLSearchParams({
       client_id: process.env.FACEBOOK_APP_ID,
       client_secret: process.env.FACEBOOK_APP_SECRET,
@@ -293,6 +421,7 @@ const facebookCallback = async (req, res) => {
     const tokenData = await tokenResponse.json();
 
     if (!tokenData.access_token) {
+      console.error("Facebook token exchange failed:", tokenData);
       return redirectWithError(res, frontend, "Facebook token exchange failed.");
     }
 

@@ -3,45 +3,48 @@
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 
+import { getStoredUser } from "../utils/superAdmin";
+
+interface AuthUser {
+  id?: string;
+  _id?: string;
+  name?: string;
+  email?: string;
+  profileImage?: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (token: string) => void;
+  user: AuthUser | null;
+  login: (token: string, user?: AuthUser | null) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // ==========================================
-  // AUTH STATE
-  // ==========================================
-
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
     !!localStorage.getItem("token"),
   );
+  const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
 
-  // ==========================================
-  // LOGIN
-  // ==========================================
-
-  const login = (token: string) => {
+  const login = (token: string, nextUser?: AuthUser | null) => {
     localStorage.setItem("token", token);
+
+    if (nextUser) {
+      localStorage.setItem("user", JSON.stringify(nextUser));
+      setUser(nextUser);
+    } else {
+      setUser(getStoredUser());
+    }
 
     setIsAuthenticated(true);
   };
 
-  // ==========================================
-  // LOGOUT
-  // ==========================================
-
   const logout = () => {
-    // Remove JWT token
     localStorage.removeItem("token");
-
-    // Remove logged-in user information
     localStorage.removeItem("user");
-
-    // Update React authentication state
+    setUser(null);
     setIsAuthenticated(false);
   };
 
@@ -49,6 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         isAuthenticated,
+        user,
         login,
         logout,
       }}
@@ -57,10 +61,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     </AuthContext.Provider>
   );
 };
-
-// ==========================================
-// CUSTOM AUTH HOOK
-// ==========================================
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

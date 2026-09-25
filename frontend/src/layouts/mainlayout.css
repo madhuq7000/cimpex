@@ -124,12 +124,17 @@
   }
 
   .topbar .mobile-toggle{
-    display: inline-flex !important;
+    display: none;
     align-items: center;
     justify-content: center;
     padding: 0.2rem 0.35rem !important;
     line-height: 1;
     flex-shrink: 0;
+    position: relative;
+    z-index: 6;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
   }
 
   .brand-name{
@@ -779,9 +784,21 @@
     height: auto;
   }
 
+  #sidebarOffcanvas.offcanvas{
+    z-index: 1055;
+  }
+
+  .offcanvas-backdrop{
+    z-index: 1050;
+  }
+
   /* Offcanvas sidebar tweaks for mobile */
   @media (max-width: 991.98px){
     .sidebar-col{ display:none; }
+
+    .topbar .mobile-toggle{
+      display: inline-flex !important;
+    }
 
     .topbar-row{
       flex-wrap: nowrap;
@@ -1353,14 +1370,54 @@
     border-radius:10px;
     background:#fff;
     overflow:hidden;
+    width:100%;
   }
+  .start-discussion-page{
+    width:100%;
+    max-width:100%;
+  }
+  .start-discussion-page form,
+  .start-discussion-page .editor-wrap,
+  .start-discussion-page .editor-body{
+    width:100%;
+    max-width:100%;
+  }
+
+  .dashboard-tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .dashboard-review-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .dashboard-review-card{
+    margin-bottom:0;
+  }
+  .dashboard-review-main{
+    min-width:0;
+    flex:1;
+  }
+  .dashboard-review-summary{
+    color:#4b5563;
+    font-size:.95rem;
+    line-height:1.45;
+  }
+  .dashboard-view-btn{
+    flex-shrink:0;
+    min-width:88px;
+  }
+
   .editor-toolbar{
     background:#f9fafb;
     border-bottom:1px solid var(--card-border);
     padding:.5rem .75rem;
     display:flex;
     align-items:center;
-    gap:.9rem;
+    flex-wrap:wrap;
+    gap:.65rem;
     color:#4b5563;
   }
   .editor-toolbar i{ font-size:1rem; cursor:pointer; }
@@ -1450,6 +1507,48 @@
   .editor-toolbar button{
     border:none !important;
     background:transparent !important;
+  }
+  .editor-tool-select,
+  .editor-tool-color{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    cursor:pointer;
+  }
+  .editor-tool-select select{
+    border:1px solid #d1d5db;
+    border-radius:4px;
+    font-size:12px;
+    padding:2px 4px;
+    max-width:78px;
+    background:#fff;
+  }
+  .editor-tool-color input[type="color"]{
+    width:28px;
+    height:22px;
+    padding:0;
+    border:1px solid #d1d5db;
+    border-radius:4px;
+    background:transparent;
+    cursor:pointer;
+  }
+  .editor-color-swatches{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    flex-wrap:wrap;
+  }
+  .editor-color-swatch{
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    border:1px solid rgba(0,0,0,.15);
+    padding:0;
+    cursor:pointer;
+  }
+  .editor-color-swatch.active{
+    outline:2px solid var(--brand);
+    outline-offset:1px;
   }
   .logout{
     border:none !important;

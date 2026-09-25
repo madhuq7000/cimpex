@@ -18,6 +18,8 @@ import ImageSourceFields from "../../../sharedComponent/ImageSourceFields";
 import MediaAttachSelect, {
   type MediaAttachKind,
 } from "../../../sharedComponent/MediaAttachSelect";
+import { isCompetitionAdminEmail } from "../../../core/utils/superAdmin";
+import ConfirmModal from "../../../sharedComponent/ConfirmModal";
 import { getYoutubeVideoId } from "../../../core/utils/youtube";
 
 interface CompetitionUser {
@@ -68,6 +70,7 @@ interface LoggedInUser {
   id?: string;
   _id?: string;
   name?: string;
+  email?: string;
   profileImage?: string;
 }
 
@@ -115,6 +118,14 @@ const CompetitionDetails: React.FC = () => {
   const [mediaKind, setMediaKind] = useState<MediaAttachKind>("");
   const [entryError, setEntryError] = useState("");
   const [entryLoading, setEntryLoading] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState("");
+  const [existingEntryMedia, setExistingEntryMedia] = useState<{
+    video?: string;
+    youtubeUrl?: string;
+    image?: string;
+    document?: string;
+    documentName?: string;
+  }>({});
 
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -124,13 +135,85 @@ const CompetitionDetails: React.FC = () => {
   const [sortComments, setSortComments] = useState("Latest");
   const [deletingCompetition, setDeletingCompetition] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState("");
+  const [deletingEntryId, setDeletingEntryId] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<
+    | null
+    | { type: "competition" }
+    | { type: "comment"; id: string }
+    | { type: "entry"; id: string }
+  >(null);
 
   const currentUserId = String(loggedInUser?.id || loggedInUser?._id || "");
+  const isCompetitionAdmin = isCompetitionAdminEmail(loggedInUser?.email);
   const isCompetitionOwner = Boolean(
     currentUserId &&
       competition?.createdBy?._id &&
       String(competition.createdBy._id) === currentUserId,
   );
+  const canManageCompetition = isCompetitionOwner || isCompetitionAdmin;
+  const canModerateComments = isCompetitionOwner || isCompetitionAdmin;
+
+  const canManageEntry = (entry: CompetitionEntry) => {
+    if (!isAuthenticated || !currentUserId) {
+      return false;
+    }
+
+    const isEntryOwner = Boolean(
+      entry.createdBy?._id && String(entry.createdBy._id) === currentUserId,
+    );
+
+    return isEntryOwner || isCompetitionAdmin || isCompetitionOwner;
+  };
+
+  const resetEntryForm = () => {
+    setEditingEntryId("");
+    setStance("support");
+    setEntryTitle("");
+    setArticle("");
+    setVideo(null);
+    setImage(null);
+    setDocumentFile(null);
+    setYoutubeUrl("");
+    setVideoPreview("");
+    setMediaKind("");
+    setExistingEntryMedia({});
+    setEntryError("");
+  };
+
+  const startEditEntry = (entry: CompetitionEntry) => {
+    setEditingEntryId(entry._id);
+    setStance(entry.stance);
+    setEntryTitle(entry.title || "");
+    setArticle(entry.article || "");
+    setVideo(null);
+    setImage(null);
+    setDocumentFile(null);
+    setYoutubeUrl(entry.youtubeUrl || "");
+    setExistingEntryMedia({
+      video: entry.video || "",
+      youtubeUrl: entry.youtubeUrl || "",
+      image: entry.image || "",
+      document: entry.document || "",
+      documentName: entry.documentName || "",
+    });
+
+    if (entry.video || entry.youtubeUrl) {
+      setMediaKind("video");
+    } else if (entry.image) {
+      setMediaKind("image");
+    } else if (entry.document) {
+      setMediaKind("document");
+    } else {
+      setMediaKind("");
+    }
+
+    setEntryError("");
+    window.setTimeout(() => {
+      document
+        .getElementById("competition-entry-form")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
 
   useEffect(() => {
     if (!video) {
@@ -153,7 +236,10 @@ const CompetitionDetails: React.FC = () => {
       setLoading(true);
       setError("");
 
-      const response = await axios.get(`${API_URL}/competitions/${id}`);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_URL}/competitions/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       setCompetition(response.data.data || null);
     } catch (loadError: any) {
       setError(loadError.response?.data?.message || t("failedLoadCompetition"));
@@ -171,7 +257,10 @@ const CompetitionDetails: React.FC = () => {
       setCommentsLoading(true);
       setCommentError("");
 
-      const response = await axios.get(`${API_URL}/competitions/${id}/comments`);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_URL}/competitions/${id}/comments`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       setComments(Array.isArray(response.data.data) ? response.data.data : []);
     } catch (loadError: any) {
       setComments([]);
@@ -268,11 +357,18 @@ const CompetitionDetails: React.FC = () => {
       return;
     }
 
+    const hasExistingMedia =
+      Boolean(editingEntryId) &&
+      ((mediaKind === "video" &&
+        (existingEntryMedia.video || existingEntryMedia.youtubeUrl)) ||
+        (mediaKind === "image" && existingEntryMedia.image) ||
+        (mediaKind === "document" && existingEntryMedia.document));
+
     if (
       !article.trim() &&
-      !(mediaKind === "video" && (video || youtubeUrl.trim())) &&
-      !(mediaKind === "document" && documentFile) &&
-      !(mediaKind === "image" && image)
+      !(mediaKind === "video" && (video || youtubeUrl.trim() || hasExistingMedia)) &&
+      !(mediaKind === "document" && (documentFile || hasExistingMedia)) &&
+      !(mediaKind === "image" && (image || hasExistingMedia))
     ) {
       setEntryError(t("entryContentRequired"));
       return;
@@ -319,24 +415,43 @@ const CompetitionDetails: React.FC = () => {
         formData.append("document", documentFile);
       }
 
-      await axios.post(`${API_URL}/competitions/${id}/entries`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      if (editingEntryId) {
+        if (mediaKind !== "image" && existingEntryMedia.image) {
+          formData.append("removeImage", "true");
+        }
+        if (mediaKind !== "video" && existingEntryMedia.video) {
+          formData.append("removeVideo", "true");
+        }
+        if (mediaKind !== "video" && existingEntryMedia.youtubeUrl) {
+          formData.append("removeYoutube", "true");
+        }
+        if (mediaKind !== "document" && existingEntryMedia.document) {
+          formData.append("removeDocument", "true");
+        }
 
-      setEntryTitle("");
-      setArticle("");
-      setVideo(null);
-      setImage(null);
-      setDocumentFile(null);
-      setYoutubeUrl("");
-      setVideoPreview("");
-      setMediaKind("");
+        await axios.put(
+          `${API_URL}/competitions/${id}/entries/${editingEntryId}`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+      } else {
+        await axios.post(`${API_URL}/competitions/${id}/entries`, formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+
+      resetEntryForm();
       await loadCompetition();
     } catch (submitError: any) {
       setEntryError(
-        submitError.response?.data?.message || t("failedSubmitEntry"),
+        submitError.response?.data?.message ||
+          (editingEntryId ? t("failedUpdateEntry") : t("failedSubmitEntry")),
       );
     } finally {
       setEntryLoading(false);
@@ -383,10 +498,6 @@ const CompetitionDetails: React.FC = () => {
       return;
     }
 
-    if (!window.confirm(t("deleteCompetitionConfirm"))) {
-      return;
-    }
-
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -404,11 +515,13 @@ const CompetitionDetails: React.FC = () => {
         },
       });
 
+      setDeleteTarget(null);
       navigate("/competitions", { replace: true });
     } catch (deleteError: any) {
       setError(
         deleteError.response?.data?.message || t("failedDeleteCompetition"),
       );
+      setDeleteTarget(null);
     } finally {
       setDeletingCompetition(false);
     }
@@ -416,10 +529,6 @@ const CompetitionDetails: React.FC = () => {
 
   const handleDeleteComment = async (commentId: string) => {
     if (!id || !commentId || deletingCommentId) {
-      return;
-    }
-
-    if (!window.confirm(t("deleteCommentConfirm"))) {
       return;
     }
 
@@ -444,18 +553,57 @@ const CompetitionDetails: React.FC = () => {
       );
 
       setComments((prev) => prev.filter((item) => item._id !== commentId));
+      setDeleteTarget(null);
     } catch (deleteError: any) {
       setCommentError(
         deleteError.response?.data?.message || t("failedDeleteComment"),
       );
+      setDeleteTarget(null);
     } finally {
       setDeletingCommentId("");
+    }
+  };
+
+  const handleDeleteEntry = async (entryId: string) => {
+    if (!id || !entryId || deletingEntryId) {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setDeletingEntryId(entryId);
+      setError("");
+
+      await axios.delete(`${API_URL}/competitions/${id}/entries/${entryId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (editingEntryId === entryId) {
+        resetEntryForm();
+      }
+
+      setDeleteTarget(null);
+      await loadCompetition();
+    } catch (deleteError: any) {
+      setError(deleteError.response?.data?.message || t("failedDeleteEntry"));
+      setDeleteTarget(null);
+    } finally {
+      setDeletingEntryId("");
     }
   };
 
   const renderEntry = (entry: CompetitionEntry) => {
     const authorName =
       entry.createdBy?.name || entry.createdBy?.email || t("user");
+    const showManageActions = canManageEntry(entry);
 
     return (
       <article className="discussion-card mb-3" key={entry._id}>
@@ -492,13 +640,39 @@ const CompetitionDetails: React.FC = () => {
           </div>
 
           <div className="col-md-8">
-            <span
-              className={`stance-badge ${
-                entry.stance === "support" ? "support" : "against"
-              }`}
-            >
-              {entry.stance === "support" ? t("inSupport") : t("against")}
-            </span>
+            <div className="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+              <span
+                className={`stance-badge ${
+                  entry.stance === "support" ? "support" : "against"
+                }`}
+              >
+                {entry.stance === "support" ? t("inSupport") : t("against")}
+              </span>
+
+              {showManageActions ? (
+                <div className="d-flex gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => startEditEntry(entry)}
+                  >
+                    {t("edit")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    disabled={deletingEntryId === entry._id}
+                    onClick={() =>
+                      setDeleteTarget({ type: "entry", id: entry._id })
+                    }
+                  >
+                    {deletingEntryId === entry._id
+                      ? t("deleting")
+                      : t("delete")}
+                  </button>
+                </div>
+              ) : null}
+            </div>
 
             <TranslatedContent as="h3" className="card-title mt-2" text={entry.title} />
 
@@ -522,12 +696,22 @@ const CompetitionDetails: React.FC = () => {
               </a>
             ) : null}
 
-            <div className="d-flex align-items-center gap-2 profileImage">
+            <div className="d-flex align-items-center gap-2 flex-wrap profileImage">
               <img
                 src={getProfileImageUrl(entry.createdBy?.profileImage)}
                 alt={authorName}
               />
-              <span className="author-name">{authorName}</span>
+              <div className="d-flex flex-column min-w-0">
+                <span className="author-name">{authorName}</span>
+                {entry.createdBy?.email ? (
+                  <span
+                    className="time-text"
+                    style={{ fontSize: "0.8rem", wordBreak: "break-all" }}
+                  >
+                    {entry.createdBy.email}
+                  </span>
+                ) : null}
+              </div>
               <span className="time-text ms-auto">{formatDate(entry.createdAt)}</span>
             </div>
           </div>
@@ -573,23 +757,52 @@ const CompetitionDetails: React.FC = () => {
       <div className="discussion-card mb-4">
         <div className="d-flex align-items-start justify-content-between gap-2 flex-wrap mb-2">
           <span className="tag d-inline-block">{t("competition")}</span>
-          {isAuthenticated && isCompetitionOwner && (
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-danger"
-              disabled={deletingCompetition}
-              onClick={() => void handleDeleteCompetition()}
-            >
-              {deletingCompetition ? t("deleting") : t("deleteCompetition")}
-            </button>
-          )}
+          <div className="d-flex gap-2 flex-wrap">
+            {!isAuthenticated ? (
+              <button
+                type="button"
+                className="btn btn-brand"
+                onClick={() =>
+                  navigate(
+                    `/login?mode=participate&next=${encodeURIComponent(
+                      `/competitions/${competition._id}`,
+                    )}`,
+                  )
+                }
+              >
+                {t("participate")}
+              </button>
+            ) : null}
+            {isAuthenticated && canManageCompetition ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={() =>
+                    navigate(`/competitions/edit/${competition._id}`)
+                  }
+                >
+                  {t("editCompetition")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-danger"
+                  disabled={deletingCompetition}
+                  onClick={() => setDeleteTarget({ type: "competition" })}
+                >
+                  {deletingCompetition ? t("deleting") : t("deleteCompetition")}
+                </button>
+              </>
+            ) : null}
+          </div>
         </div>
         <TranslatedContent as="h1" className="mb-2" text={competition.title} />
 
         {competition.description ? (
           <TranslatedContent
-            as="p"
-            className="mb-3"
+            as="div"
+            className="mb-3 discussion-description"
+            html
             text={competition.description}
             style={{ color: "#374151" }}
           />
@@ -616,8 +829,8 @@ const CompetitionDetails: React.FC = () => {
               }}
               style={{
                 width: "100%",
-                maxHeight: "450px",
-                objectFit: "cover",
+                height: "auto",
+                display: "block",
                 borderRadius: "10px",
               }}
             />
@@ -642,8 +855,21 @@ const CompetitionDetails: React.FC = () => {
         </div>
       </div>
 
-      <div className="discussion-card mb-4">
-        <h2 className="section-title mb-3">{t("submitYourEntry")}</h2>
+      <div className="discussion-card mb-4" id="competition-entry-form">
+        <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+          <h2 className="section-title mb-0">
+            {editingEntryId ? t("editEntry") : t("submitYourEntry")}
+          </h2>
+          {editingEntryId ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary"
+              onClick={resetEntryForm}
+            >
+              {t("cancelEdit")}
+            </button>
+          ) : null}
+        </div>
 
         {isAuthenticated ? (
           <form onSubmit={handleSubmitEntry}>
@@ -756,16 +982,31 @@ const CompetitionDetails: React.FC = () => {
             )}
 
             <button type="submit" className="btn btn-brand" disabled={entryLoading}>
-              {entryLoading ? t("submitting") : t("submitEntry")}
+              {entryLoading
+                ? editingEntryId
+                  ? t("saving")
+                  : t("submitting")
+                : editingEntryId
+                  ? t("updateEntry")
+                  : t("submitEntry")}
             </button>
           </form>
         ) : (
-          <div className="alert alert-light border text-center mb-0">
-            <i className="bi bi-lock-fill me-2"></i>
-            {t("pleaseLoginToEnter")}{" "}
-            <Link to="/login" className="fw-semibold">
-              {t("login")}
-            </Link>
+          <div className="text-center py-3">
+            <p className="text-muted mb-3">{t("participateToSubmitEntry")}</p>
+            <button
+              type="button"
+              className="btn btn-brand"
+              onClick={() =>
+                navigate(
+                  `/login?mode=participate&next=${encodeURIComponent(
+                    `/competitions/${competition._id}`,
+                  )}`,
+                )
+              }
+            >
+              {t("participate")}
+            </button>
           </div>
         )}
       </div>
@@ -843,14 +1084,16 @@ const CompetitionDetails: React.FC = () => {
                     </div>
                   </div>
                   {isAuthenticated &&
-                    (isCompetitionOwner ||
+                    (canModerateComments ||
                       String(comment.createdBy?._id || "") ===
                         currentUserId) && (
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-danger"
                         disabled={deletingCommentId === comment._id}
-                        onClick={() => void handleDeleteComment(comment._id)}
+                        onClick={() =>
+                          setDeleteTarget({ type: "comment", id: comment._id })
+                        }
                       >
                         {deletingCommentId === comment._id
                           ? t("deleting")
@@ -906,6 +1149,47 @@ const CompetitionDetails: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        show={Boolean(deleteTarget)}
+        title={
+          deleteTarget?.type === "comment"
+            ? t("deleteComment")
+            : deleteTarget?.type === "entry"
+              ? t("deleteEntry")
+              : t("deleteCompetition")
+        }
+        message={
+          deleteTarget?.type === "comment"
+            ? t("deleteCommentConfirm")
+            : deleteTarget?.type === "entry"
+              ? t("deleteEntryConfirm")
+              : t("deleteCompetitionConfirm")
+        }
+        confirmLabel={t("delete")}
+        cancelLabel={t("cancel")}
+        confirming={
+          deleteTarget?.type === "competition"
+            ? deletingCompetition
+            : deleteTarget?.type === "entry"
+              ? Boolean(deletingEntryId)
+              : Boolean(deletingCommentId)
+        }
+        onCancel={() => {
+          if (!deletingCompetition && !deletingCommentId && !deletingEntryId) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={() => {
+          if (deleteTarget?.type === "competition") {
+            void handleDeleteCompetition();
+          } else if (deleteTarget?.type === "comment") {
+            void handleDeleteComment(deleteTarget.id);
+          } else if (deleteTarget?.type === "entry") {
+            void handleDeleteEntry(deleteTarget.id);
+          }
+        }}
+      />
     </div>
   );
 };

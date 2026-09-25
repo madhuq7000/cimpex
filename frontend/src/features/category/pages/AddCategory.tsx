@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import { Navigate } from "react-router-dom";
 
 import {
   addCategoryApi,
@@ -11,12 +12,18 @@ import {
 } from "../categoryApi";
 
 import type { Category } from "../types";
+import { useAuth } from "../../../core/context/AuthContext";
 import { useLanguage } from "../../../core/context/LanguageContext";
+import { isSuperAdminEmail } from "../../../core/utils/superAdmin";
 
 import "./AddCategory.css";
 
 export default function AddCategory() {
   const { t } = useLanguage();
+  const { isAuthenticated, user } = useAuth();
+  const canManageCategories =
+    isAuthenticated && isSuperAdminEmail(user?.email);
+
   // ==========================================
   // STATES
   // ==========================================
@@ -206,6 +213,10 @@ export default function AddCategory() {
   // ==========================================
   // JSX
   // ==========================================
+
+  if (!canManageCategories) {
+    return <Navigate to="/discussion" replace />;
+  }
 
   return (
     <form onSubmit={handleSubmit}>

@@ -2,6 +2,7 @@
 
 const Comment = require("../models/Comment");
 const Discussion = require("../models/Discussion");
+const { isSuperAdminUser } = require("../utils/superAdmin");
 
 // ==========================================
 // ADD COMMENT
@@ -214,8 +215,9 @@ const deleteComment = async (req, res) => {
       discussion &&
       discussion.createdBy &&
       discussion.createdBy.toString() === String(userId);
+    const isSuperAdmin = isSuperAdminUser(req.user);
 
-    if (!isCommentOwner && !isDiscussionOwner) {
+    if (!isCommentOwner && !isDiscussionOwner && !isSuperAdmin) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to delete this comment",

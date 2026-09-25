@@ -3,16 +3,19 @@ const path = require("path");
 
 const allowedExtensions = [".pdf", ".doc", ".docx"];
 
-const allowedMimeTypes = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/octet-stream",
-];
+const decodeOriginalName = (name = "") => {
+  try {
+    // Browsers often send UTF-8 filenames as latin1 to Multer.
+    return Buffer.from(String(name), "latin1").toString("utf8");
+  } catch (_error) {
+    return String(name || "");
+  }
+};
 
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
+  file.originalname = decodeOriginalName(file.originalname);
   const extension = path.extname(file.originalname || "").toLowerCase();
 
   if (!allowedExtensions.includes(extension)) {
@@ -34,6 +37,10 @@ const uploadDiscussionDocument = multer({
 const handleDiscussionDocumentUpload = (req, res, next) => {
   uploadDiscussionDocument.single("document")(req, res, (error) => {
     if (!error) {
+      if (req.file?.originalname) {
+        req.file.originalname = decodeOriginalName(req.file.originalname);
+      }
+
       next();
       return;
     }

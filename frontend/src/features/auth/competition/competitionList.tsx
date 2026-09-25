@@ -51,7 +51,10 @@ const CompetitionList: React.FC = () => {
         setLoading(true);
         setError("");
 
-        const response = await axios.get(`${API_URL}/competitions`);
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${API_URL}/competitions`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
         setCompetitions(Array.isArray(response.data.data) ? response.data.data : []);
       } catch (loadError: any) {
         setError(
@@ -152,7 +155,8 @@ const CompetitionList: React.FC = () => {
                       {competition.description ? (
                         <TranslatedContent
                           as="div"
-                          className="card-desc mb-2"
+                          className="card-desc mb-2 discussion-description"
+                          html
                           text={competition.description}
                           style={{
                             color: "#374151",

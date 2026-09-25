@@ -4,10 +4,7 @@ import axios from "axios";
 import { sanitizeDiscussionHtml } from "../../../core/utils/sanitizeDiscussionHtml";
 
 import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
 import ResizableImage from "./resizableImage";
-import { TableKit } from "@tiptap/extension-table";
-import TextAlign from "@tiptap/extension-text-align";
 
 import { API_URL } from "../../../core/config/env";
 import { useLanguage } from "../../../core/context/LanguageContext";
@@ -17,6 +14,8 @@ import ImageSourceFields from "../../../sharedComponent/ImageSourceFields";
 import MediaAttachSelect, {
   type MediaAttachKind,
 } from "../../../sharedComponent/MediaAttachSelect";
+import EditorToolbar from "../../../sharedComponent/EditorToolbar";
+import { getBaseEditorExtensions } from "../../../sharedComponent/editorExtensions";
 
 interface Category {
   _id: string;
@@ -39,6 +38,13 @@ interface Discussion {
 }
 
 const MAX_DESCRIPTION_CHARS = 50000;
+
+const htmlHasReadableText = (html: string) =>
+  String(html || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim().length > 0;
 
 const StartDiscussion: React.FC = () => {
   const navigate = useNavigate();
@@ -123,26 +129,12 @@ const StartDiscussion: React.FC = () => {
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        link: {
-          openOnClick: false,
-          autolink: true,
-          linkOnPaste: true,
-        },
-      }),
+      ...getBaseEditorExtensions(),
       ResizableImage.configure({
         inline: false,
         allowBase64: true,
         HTMLAttributes: {
           class: "imported-doc-image",
-        },
-      }),
-      TextAlign.configure({
-        types: ["heading", "paragraph", "image"],
-      }),
-      TableKit.configure({
-        table: {
-          resizable: false,
         },
       }),
     ],
@@ -368,6 +360,7 @@ const StartDiscussion: React.FC = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          timeout: 120000,
         },
       );
 
@@ -383,8 +376,14 @@ const StartDiscussion: React.FC = () => {
         editor.commands.setContent(sanitizeDiscussionHtml(importedDescription));
       }
 
+      const hasReadableContent =
+        htmlHasReadableText(importedDescription) ||
+        /<img\s/i.test(importedDescription);
+
       setSuccess(
-        "Title and description were filled from your document. Review them, choose a category, then submit.",
+        hasReadableContent
+          ? "Title and description were filled from your document. Review them, choose a category, then submit."
+          : "Document attached, but no readable text was found. Add a title and description, then submit.",
       );
     } catch (importError: any) {
       console.error("Failed to import document:", importError);
@@ -399,10 +398,23 @@ const StartDiscussion: React.FC = () => {
       if (importError.response?.status === 401) {
         setDocumentFile(null);
         setError("Unauthorized. Please login again.");
-      } else {
+      } else if (importError.code === "ECONNABORTED") {
         setError(
-          importError.response?.data?.message ||
-            "Could not read text from this document. The file is still attached — add a title and description, then submit.",
+          "Document import timed out. Try a smaller file, or add the title and description manually — the file is still attached.",
+        );
+      } else if (!importError.response) {
+        setError(
+          "Could not reach the server to read this document. Check your connection, then try again. The file is still attached.",
+        );
+      } else if (importError.response.status === 413) {
+        setError(
+          "Document is too large for the server upload limit. Ask the host to raise nginx client_max_body_size (e.g. 50M), or use a smaller file. The file is still attached for manual entry.",
+        );
+      } else {
+        const serverMessage = String(importError.response?.data?.message || "").trim();
+        setError(
+          serverMessage ||
+            `Could not read text from this document (error ${importError.response.status}). The file is still attached — add a title and description, then submit.`,
         );
       }
 
@@ -763,7 +775,7 @@ const StartDiscussion: React.FC = () => {
 
   if (pageLoading) {
     return (
-      <main className="col-lg-9 col-xl-10 main-wrap">
+      <div className="start-discussion-page">
         <div className="text-center py-5">
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">{t("loading")}</span>
@@ -771,7 +783,7 @@ const StartDiscussion: React.FC = () => {
 
           <p className="text-muted mt-3">{t("loadingDiscussion")}</p>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -780,7 +792,7 @@ const StartDiscussion: React.FC = () => {
   // ==========================================
 
   return (
-    <main className="col-lg-9 col-xl-10 main-wrap">
+    <div className="start-discussion-page">
       {/* ======================================
           BREADCRUMB
       ====================================== */}
@@ -905,168 +917,13 @@ const StartDiscussion: React.FC = () => {
           <label className="field-label">{t("description")}</label>
 
           <div className="editor-wrap">
-            {/* ================================
-                TOOLBAR
-            ================================ */}
-
-            <div className="editor-toolbar">
-              {/* BOLD */}
-
-              <button
-                type="button"
-                className={`editor-tool ${
-                  editor?.isActive("bold") ? "active" : ""
-                }`}
-                title="Bold"
-                onClick={() => editor?.chain().focus().toggleBold().run()}
-              >
-                <i className="bi bi-type-bold"></i>
-              </button>
-
-              {/* ITALIC */}
-
-              <button
-                type="button"
-                className={`editor-tool ${
-                  editor?.isActive("italic") ? "active" : ""
-                }`}
-                title="Italic"
-                onClick={() => editor?.chain().focus().toggleItalic().run()}
-              >
-                <i className="bi bi-type-italic"></i>
-              </button>
-
-              {/* BULLET LIST */}
-
-              <button
-                type="button"
-                className={`editor-tool ${
-                  editor?.isActive("bulletList") ? "active" : ""
-                }`}
-                title="Bullet List"
-                onClick={() => editor?.chain().focus().toggleBulletList().run()}
-              >
-                <i className="bi bi-list-ul"></i>
-              </button>
-
-              {/* QUOTE */}
-
-              <button
-                type="button"
-                className={`editor-tool ${
-                  editor?.isActive("blockquote") ? "active" : ""
-                }`}
-                title="Quote"
-                onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-              >
-                <i className="bi bi-quote"></i>
-              </button>
-
-              {/* LINK */}
-
-              <button
-                type="button"
-                className={`editor-tool ${
-                  editor?.isActive("link") ? "active" : ""
-                }`}
-                title="Add Link"
-                onClick={handleSetLink}
-              >
-                <i className="bi bi-link-45deg"></i>
-              </button>
-
-              {editor?.isActive("image") && (
-                <>
-                  <button
-                    type="button"
-                    className={`editor-tool ${
-                      editor.isActive("image", { align: "left" }) ? "active" : ""
-                    }`}
-                    title="Align image left"
-                    onClick={() =>
-                      editor
-                        .chain()
-                        .focus()
-                        .updateAttributes("image", { align: "left" })
-                        .run()
-                    }
-                  >
-                    <i className="bi bi-text-left"></i>
-                  </button>
-                  <button
-                    type="button"
-                    className={`editor-tool ${
-                      editor.isActive("image", { align: "center" })
-                        ? "active"
-                        : ""
-                    }`}
-                    title="Align image center"
-                    onClick={() =>
-                      editor
-                        .chain()
-                        .focus()
-                        .updateAttributes("image", { align: "center" })
-                        .run()
-                    }
-                  >
-                    <i className="bi bi-text-center"></i>
-                  </button>
-                  <button
-                    type="button"
-                    className={`editor-tool ${
-                      editor.isActive("image", { align: "right" })
-                        ? "active"
-                        : ""
-                    }`}
-                    title="Align image right"
-                    onClick={() =>
-                      editor
-                        .chain()
-                        .focus()
-                        .updateAttributes("image", { align: "right" })
-                        .run()
-                    }
-                  >
-                    <i className="bi bi-text-right"></i>
-                  </button>
-                </>
-              )}
-
-              {/* REMOVE LINK */}
-
-              {editor?.isActive("link") && (
-                <button
-                  type="button"
-                  className="editor-tool"
-                  title="Remove Link"
-                  onClick={handleRemoveLink}
-                >
-                  <i className="bi bi-link-45deg"></i>
-                  <span
-                    style={{
-                      fontSize: "10px",
-                    }}
-                  >
-                    ×
-                  </span>
-                </button>
-              )}
-
-              {/* EMOJI */}
-
-              <button
-                type="button"
-                className="editor-tool"
-                title="Emoji"
-                onClick={handleEmoji}
-              >
-                <i className="bi bi-emoji-smile"></i>
-              </button>
-            </div>
-
-            {/* ================================
-                EDITOR
-            ================================ */}
+            <EditorToolbar
+              editor={editor}
+              onSetLink={handleSetLink}
+              onRemoveLink={handleRemoveLink}
+              onEmoji={handleEmoji}
+              showImageAlign
+            />
 
             <div className="editor-body">
               <EditorContent editor={editor} />
@@ -1235,7 +1092,7 @@ const StartDiscussion: React.FC = () => {
           </button>
         </div>
       </form>
-    </main>
+    </div>
   );
 };
 

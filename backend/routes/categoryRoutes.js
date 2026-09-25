@@ -10,21 +10,18 @@ const {
   deleteCategory,
 } = require("../auth-controllers/categoryController");
 
-//const verifyToken = require("../middlewares/verifyToken");
+const { protect } = require("../middleware/authMiddleware");
+const requireSuperAdmin = require("../middleware/requireSuperAdmin");
 
-// Create Category
-router.post("/", addCategory);
+// Get All Categories (public)
+router.get("/", getCategories);
 
-// Get All Categories
-router.get("/",getCategories);
-
-// Get Category By ID
+// Get Category By ID (public)
 router.get("/:id", getCategoryById);
 
-// Update Category
-router.put("/:id", updateCategory);
-
-// Delete Category (Soft Delete)
-router.delete("/:id", deleteCategory);
+// Create / update / delete — only rakesh@dsnlegal.com
+router.post("/", protect, requireSuperAdmin, addCategory);
+router.put("/:id", protect, requireSuperAdmin, updateCategory);
+router.delete("/:id", protect, requireSuperAdmin, deleteCategory);
 
 module.exports = router;

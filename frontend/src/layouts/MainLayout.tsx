@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FC, FormEvent } from "react";
+import { createPortal } from "react-dom";
 
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -72,15 +73,19 @@ const MainLayout: FC = () => {
 
   const [searchKeyword, setSearchKeyword] = useState("");
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [, setSelectedCategory] = useState("All");
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   // ==========================================
   // LOGOUT
   // ==========================================
 
   const handleLogout = () => {
+    closeMobileMenu();
     logout();
 
     navigate("/login", {
@@ -180,6 +185,33 @@ const MainLayout: FC = () => {
     searchInputRef.current?.focus();
   }, [mobileSearchOpen]);
 
+  useEffect(() => {
+    closeMobileMenu();
+    setMobileSearchOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMobileMenu();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <>
       {/* ================= HEADER ================= */}
@@ -201,9 +233,13 @@ const MainLayout: FC = () => {
             <button
               className="btn mobile-toggle p-2"
               type="button"
-              data-bs-toggle="offcanvas"
-              data-bs-target="#sidebarOffcanvas"
               aria-label="Open menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="sidebarOffcanvas"
+              onClick={() => {
+                setMobileSearchOpen(false);
+                setMobileMenuOpen(true);
+              }}
             >
               <i className="bi bi-list fs-4"></i>
             </button>
@@ -380,67 +416,89 @@ const MainLayout: FC = () => {
           <WhyJoinFeatures />
       </div>
 
-      <div
-        className="offcanvas offcanvas-start"
-        tabIndex={-1}
-        id="sidebarOffcanvas"
-      >
-        <div className="offcanvas-header">
-          <Link
-            to="/discussion"
-            className="d-flex align-items-center gap-2 text-decoration-none"
-            data-bs-dismiss="offcanvas"
-          >
-            <img src={logoImage} className="headerLogo" alt="Amarsa Vimarsa" />
-            <span className="brand-name">Amarsa Vimarsa</span>
-          </Link>
-
-          <button
-            type="button"
-            className="btn-close"
-            data-bs-dismiss="offcanvas"
-            aria-label={t("close")}
-          ></button>
-        </div>
-
-        <div className="offcanvas-body p-0">
+      {createPortal(
+        <>
           <div
-            className="sidebar"
+            className={`offcanvas-backdrop fade${mobileMenuOpen ? " show" : ""}`}
+            style={{ display: mobileMenuOpen ? "block" : "none" }}
+            onClick={closeMobileMenu}
+            aria-hidden={!mobileMenuOpen}
+          />
+
+          <div
+            className={`offcanvas offcanvas-start${mobileMenuOpen ? " show" : ""}`}
+            tabIndex={-1}
+            id="sidebarOffcanvas"
+            aria-modal={mobileMenuOpen}
+            role="dialog"
             style={{
-              minHeight: "auto",
+              visibility: mobileMenuOpen ? "visible" : "hidden",
             }}
           >
-            <SidebarNav dismissOffcanvas />
+            <div className="offcanvas-header">
+              <Link
+                to="/discussion"
+                className="d-flex align-items-center gap-2 text-decoration-none"
+                onClick={closeMobileMenu}
+              >
+                <img
+                  src={logoImage}
+                  className="headerLogo"
+                  alt="Amarsa Vimarsa"
+                />
+                <span className="brand-name">Amarsa Vimarsa</span>
+              </Link>
 
-            {isAuthenticated && (
-              <div className="sidebar-profile">
-                <div className="sidebar-profile-user">
-                  <img
-                    src={profileImageUrl}
-                    alt={loggedInUser?.name || t("user")}
-                    onError={handleProfileImageError}
-                  />
+              <button
+                type="button"
+                className="btn-close"
+                aria-label={t("close")}
+                onClick={closeMobileMenu}
+              ></button>
+            </div>
 
-                  <div>
-                    <div className="name">{loggedInUser?.name || t("user")}</div>
-                    <div className="email">{loggedInUser?.email || ""}</div>
+            <div className="offcanvas-body p-0">
+              <div
+                className="sidebar"
+                style={{
+                  minHeight: "auto",
+                }}
+              >
+                <SidebarNav onNavigate={closeMobileMenu} />
+
+                {isAuthenticated && (
+                  <div className="sidebar-profile">
+                    <div className="sidebar-profile-user">
+                      <img
+                        src={profileImageUrl}
+                        alt={loggedInUser?.name || t("user")}
+                        onError={handleProfileImageError}
+                      />
+
+                      <div>
+                        <div className="name">
+                          {loggedInUser?.name || t("user")}
+                        </div>
+                        <div className="email">{loggedInUser?.email || ""}</div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary w-100"
+                      onClick={handleLogout}
+                    >
+                      <i className="bi bi-box-arrow-right me-2"></i>
+                      {t("logOut")}
+                    </button>
                   </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="btn btn-outline-primary w-100"
-                  onClick={handleLogout}
-                  data-bs-dismiss="offcanvas"
-                >
-                  <i className="bi bi-box-arrow-right me-2"></i>
-                  {t("logOut")}
-                </button>
+                )}
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      </div>
+        </>,
+        document.body,
+      )}
     </>
   );
 };

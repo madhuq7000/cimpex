@@ -1,5 +1,10 @@
 const Competition = require("../models/Competition");
 const CompetitionComment = require("../models/CompetitionComment");
+const {
+  isCompetitionAdminUser,
+  filterOwnedItems,
+  isSameUserId,
+} = require("../utils/superAdmin");
 
 const addCompetitionComment = async (req, res) => {
   try {
@@ -70,9 +75,15 @@ const getCompetitionComments = async (req, res) => {
         createdAt: -1,
       });
 
+    const visibleComments = filterOwnedItems(
+      comments,
+      req.user,
+      (comment) => comment?.createdBy?._id || comment?.createdBy,
+    );
+
     return res.status(200).json({
       success: true,
-      data: comments,
+      data: visibleComments,
     });
   } catch (error) {
     console.error("Get competition comments error:", error);
@@ -115,14 +126,12 @@ const deleteCompetitionComment = async (req, res) => {
 
     const competition = await Competition.findById(id);
 
-    const isCommentOwner =
-      comment.createdBy && comment.createdBy.toString() === String(userId);
+    const isCommentOwner = isSameUserId(comment.createdBy, userId);
     const isCompetitionOwner =
-      competition &&
-      competition.createdBy &&
-      competition.createdBy.toString() === String(userId);
+      competition && isSameUserId(competition.createdBy, userId);
+    const isAdmin = isCompetitionAdminUser(req.user);
 
-    if (!isCommentOwner && !isCompetitionOwner) {
+    if (!isCommentOwner && !isCompetitionOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to delete this comment",

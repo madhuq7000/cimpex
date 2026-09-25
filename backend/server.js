@@ -63,10 +63,10 @@ app.use(express.json());
 // ========================================
 // STATIC UPLOADS
 // ========================================
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "uploads")),
-);
+const uploadsRoot = path.join(__dirname, "uploads");
+app.use("/uploads", express.static(uploadsRoot));
+// Same files under /api/uploads so production nginx that only proxies /api still serves them
+app.use("/api/uploads", express.static(uploadsRoot));
 
 // ========================================
 // AUTH ROUTES
